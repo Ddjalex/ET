@@ -1,4 +1,4 @@
-modules = ["php-8.2", "bash"]
+modules = ["php-8.2", "bash", "postgresql-16"]
 [agent]
 expertMode = true
 
@@ -29,10 +29,6 @@ outputType = "webview"
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 41945
-externalPort = 3001
 
 [[ports]]
 localPort = 43849
