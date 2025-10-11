@@ -99,20 +99,56 @@ function handleStart($chatId) {
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
-    // Get Telegram user info
-    $userInfo = getTelegramUserInfo($chatId);
-    $customerEmail = $userInfo['email'];
+    // Use configured email from secrets
+    $customerEmail = STROWALLET_EMAIL;
     
-    // Check if customer exists, create if not
-    $customer = ensureCustomerExists($chatId, $userId, $userInfo);
-    
-    if (!$customer) {
-        sendMessage($chatId, "❌ Unable to register your account. Please try again later.", true);
+    if (empty($customerEmail)) {
+        sendMessage($chatId, "❌ <b>Configuration Error</b>\n\nSTROWALLET_EMAIL is not configured. Please contact administrator.", true);
         return;
     }
     
+    // Verify customer exists in StroWallet
+    $customerCheck = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($customerEmail), 'GET', [], true);
+    
+    if (isset($customerCheck['error'])) {
+        $httpCode = $customerCheck['http_code'] ?? 0;
+        error_log("Customer check failed - HTTP $httpCode: " . json_encode($customerCheck));
+        
+        // Handle different error types
+        if ($httpCode === 404) {
+            // Customer not found - provide setup instructions
+            $msg = "❌ <b>Customer Not Found</b>\n\n";
+            $msg .= "No customer with email <code>$customerEmail</code> exists in StroWallet.\n\n";
+            $msg .= "📝 <b>Setup Required:</b>\n";
+            $msg .= "1. Log into StroWallet dashboard\n";
+            $msg .= "2. Go to Card Holders → Create New\n";
+            $msg .= "3. Create customer with email: <code>$customerEmail</code>\n";
+            $msg .= "4. Complete KYC verification\n";
+            $msg .= "5. Try creating a card again";
+            sendMessage($chatId, $msg, true);
+        } elseif ($httpCode === 401 || $httpCode === 403) {
+            // Auth error
+            $msg = "❌ <b>Authentication Error</b>\n\n";
+            $msg .= "StroWallet API authentication failed.\n\n";
+            $msg .= "This is a configuration issue. Please contact the administrator.\n\n";
+            $msg .= "🔍 <b>Error Details:</b> " . ($customerCheck['error'] ?? 'Auth failed');
+            sendMessage($chatId, $msg, true);
+        } else {
+            // Network or server error
+            $msg = "❌ <b>Service Error</b>\n\n";
+            $msg .= "Unable to connect to StroWallet API.\n\n";
+            $msg .= "Please try again in a few moments.\n\n";
+            $msg .= "🔍 <b>Error:</b> " . ($customerCheck['error'] ?? 'Unknown error');
+            sendMessage($chatId, $msg, true);
+        }
+        return;
+    }
+    
+    // Get Telegram user info for card name
+    $userInfo = getTelegramUserInfo($chatId);
+    
     $requestData = [
-        'name_on_card' => $userInfo['first_name'],
+        'name_on_card' => $userInfo['first_name'] . ' ' . $userInfo['last_name'],
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
         'amount' => '5',
@@ -565,53 +601,6 @@ function getTelegramUserInfo($chatId) {
     ];
 }
 
-function ensureCustomerExists($chatId, $userId, $userInfo) {
-    $customerEmail = $userInfo['email'];
-    
-    // Check if customer exists
-    $checkResult = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($customerEmail), 'GET', [], true);
-    
-    // If customer exists, return true
-    if (isset($checkResult['data']) || isset($checkResult['customer'])) {
-        error_log("Customer exists: $customerEmail");
-        return true;
-    }
-    
-    // Customer doesn't exist, create one
-    sendMessage($chatId, "📝 <b>First Time Setup</b>\n\nCreating your customer profile in StroWallet...", false);
-    
-    $customerData = [
-        'public_key' => STROW_PUBLIC_KEY,
-        'firstName' => $userInfo['first_name'],
-        'lastName' => $userInfo['last_name'] ?: 'User',
-        'customerEmail' => $customerEmail,
-        'phoneNumber' => '1234567890', // Placeholder
-        'dateOfBirth' => '01/01/1990', // Placeholder
-        'houseNumber' => '1',
-        'line1' => 'Telegram Bot Address',
-        'city' => 'City',
-        'state' => 'State',
-        'zipCode' => '00000',
-        'country' => 'US',
-        'idType' => 'PASSPORT',
-        'idNumber' => 'TG' . $userId,
-        'idImage' => 'https://via.placeholder.com/300x200.png?text=ID',
-        'userPhoto' => 'https://via.placeholder.com/300x300.png?text=Photo'
-    ];
-    
-    $createResult = callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
-    
-    if (isset($createResult['error'])) {
-        error_log("Failed to create customer: " . json_encode($createResult));
-        sendMessage($chatId, "❌ Failed to create customer profile: " . ($createResult['error'] ?? 'Unknown error'), true);
-        return false;
-    }
-    
-    error_log("Customer created successfully: $customerEmail");
-    sendMessage($chatId, "✅ Customer profile created successfully!", false);
-    
-    return true;
-}
 
 // ==================== MOCK DATA FUNCTIONS ====================
 
