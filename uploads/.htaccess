@@ -1,0 +1,12 @@
+# Allow access to uploaded files
+Options +FollowSymLinks
+RewriteEngine Off
+
+# Prevent directory browsing
+Options -Indexes
+
+# Allow images to be served
+<FilesMatch "\.(jpg|jpeg|png|gif|pdf)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>

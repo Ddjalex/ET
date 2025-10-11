@@ -67,12 +67,6 @@ if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECR
 $input = file_get_contents('php://input');
 $update = json_decode($input, true);
 
-// Debug log
-error_log("Webhook received: " . $input);
-error_log("BOT_TOKEN exists: " . (BOT_TOKEN ? 'YES' : 'NO'));
-error_log("Chat ID: " . ($chatId ?? 'NONE'));
-error_log("Message text: " . ($text ?? 'NONE'));
-
 if (!$update) {
     http_response_code(400);
     die('Invalid JSON');
@@ -83,6 +77,12 @@ $message = $update['message'] ?? null;
 $chatId = $message['chat']['id'] ?? null;
 $text = trim($message['text'] ?? '');
 $userId = $message['from']['id'] ?? null;
+
+// Debug log (after variables are defined)
+error_log("Webhook received: " . $input);
+error_log("BOT_TOKEN exists: " . (BOT_TOKEN ? 'YES' : 'NO'));
+error_log("Chat ID: " . ($chatId ?? 'NONE'));
+error_log("Message text: " . ($text ?? 'NONE'));
 
 // Check for photo or document uploads
 $photo = $message['photo'] ?? null;
@@ -1293,8 +1293,8 @@ function promptForCurrentField($chatId, $state) {
         'awaiting_country' => "🌍 <b>Country (2-letter code)?</b>\n\nExamples: NG, US, UK, CA",
         'awaiting_id_type' => "🆔 <b>What type of ID do you have?</b>\n\nOptions:\n• BVN\n• NIN\n• PASSPORT",
         'awaiting_id_number' => "🔢 <b>What's your ID number?</b>",
-        'awaiting_id_image' => "📸 <b>Upload your ID document image</b>\n\nPlease send the HTTPS URL of your ID image.\nExample: https://example.com/id.jpg",
-        'awaiting_user_photo' => "🤳 <b>Upload your selfie/photo</b>\n\nPlease send the HTTPS URL of your photo.\nExample: https://example.com/selfie.jpg"
+        'awaiting_id_image' => "📸 <b>Upload your ID document image</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL",
+        'awaiting_user_photo' => "🤳 <b>Upload your selfie/photo</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL"
     ];
     
     $prompt = $prompts[$state] ?? "Please provide the requested information.";
