@@ -4,17 +4,10 @@
  * Receives deposit confirmations and other events from StroWallet
  */
 
-// Load environment variables
-$envPath = __DIR__ . '/../../secrets/.env';
-if (!file_exists($envPath)) {
-    http_response_code(500);
-    die('Configuration file not found');
-}
-$env = parse_ini_file($envPath);
-
-define('BOT_TOKEN', $env['BOT_TOKEN'] ?? '');
-define('ADMIN_CHAT_ID', $env['ADMIN_CHAT_ID'] ?? '');
-define('STROW_WEBHOOK_SECRET', $env['STROW_WEBHOOK_SECRET'] ?? '');
+// Configuration - Use environment variables (Replit Secrets)
+define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
+define('ADMIN_CHAT_ID', getenv('ADMIN_CHAT_ID') ?: '');
+define('STROW_WEBHOOK_SECRET', getenv('STROW_WEBHOOK_SECRET') ?: '');
 
 // Get incoming webhook payload
 $input = file_get_contents('php://input');

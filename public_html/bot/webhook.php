@@ -4,25 +4,16 @@
  * PHP 8+ | No Frameworks | No Composer
  */
 
-// Load environment variables
-$envPath = __DIR__ . '/../../secrets/.env';
-if (!file_exists($envPath)) {
-    http_response_code(500);
-    die('Configuration file not found');
-}
-$env = parse_ini_file($envPath);
-
-// Configuration
-define('BOT_TOKEN', $env['BOT_TOKEN'] ?? '');
-define('STROW_BASE', rtrim($env['STROW_BASE'] ?? 'https://strowallet.com/api', '/'));
-define('STROW_ADMIN_KEY', $env['STROW_ADMIN_KEY'] ?? '');
-define('STROW_PERSONAL_KEY', $env['STROW_PERSONAL_KEY'] ?? '');
-define('STROW_PUBLIC_KEY', $env['STROW_PUBLIC_KEY'] ?? '');
-define('STROWALLET_EMAIL', $env['STROWALLET_EMAIL'] ?? '');
-define('ADMIN_CHAT_ID', $env['ADMIN_CHAT_ID'] ?? '');
-define('SUPPORT_URL', $env['SUPPORT_URL'] ?? '');
-define('REFERRAL_TEXT', $env['REFERRAL_TEXT'] ?? '');
-define('TELEGRAM_SECRET_TOKEN', $env['TELEGRAM_SECRET_TOKEN'] ?? '');
+// Configuration - Use environment variables (Replit Secrets)
+define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
+define('STROW_BASE', 'https://strowallet.com/api');
+define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
+define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
+define('STROWALLET_EMAIL', getenv('STROWALLET_EMAIL') ?: '');
+define('ADMIN_CHAT_ID', getenv('ADMIN_CHAT_ID') ?: '');
+define('SUPPORT_URL', getenv('SUPPORT_URL') ?: 'https://t.me/support');
+define('REFERRAL_TEXT', getenv('REFERRAL_TEXT') ?: 'Join me on StroWallet!');
+define('TELEGRAM_SECRET_TOKEN', getenv('TELEGRAM_SECRET_TOKEN') ?: '');
 
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
@@ -303,7 +294,8 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
     
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json'
+        'Accept: application/json',
+        'Authorization: Bearer ' . STROW_SECRET_KEY
     ];
     
     $ch = curl_init();

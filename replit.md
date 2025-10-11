@@ -11,10 +11,13 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 - ✅ Implemented all core features: card creation, listing, user info, wallet, deposits
 - ✅ Built persistent reply keyboard UI with 6 buttons (fixed: using is_persistent flag)
 - ✅ Added comprehensive error handling with Request ID display
-- ✅ Created environment configuration system using .env
+- ✅ Migrated from .env file to Replit Secrets (secure environment variables)
+- ✅ Fixed StroWallet API authentication (added Authorization Bearer header)
+- ✅ Updated API integration to use public_key in request body with secret_key in header
 - ✅ Built API testing script for endpoint validation
 - ✅ Written complete deployment documentation (README.md)
 - ✅ Set up PHP development server for local testing
+- ✅ Created webhook info page (index.php) for easy webhook URL access
 - ✅ Fixed critical keyboard persistence bug (corrected from 'persistent' to 'is_persistent')
 
 ## Project Architecture
@@ -115,23 +118,24 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 ## Configuration Requirements
 
-### Required Environment Variables
+### Required Environment Variables (Replit Secrets)
 ```ini
 BOT_TOKEN=              # From @BotFather
-STROW_BASE=             # https://strowallet.com/api
-STROW_ADMIN_KEY=        # For card operations
-STROW_PERSONAL_KEY=     # For wallet/profile
+STROW_PUBLIC_KEY=       # Public key from StroWallet API dashboard
+STROW_SECRET_KEY=       # Secret key from StroWallet API dashboard
+STROWALLET_EMAIL=       # Your StroWallet registered email
 ADMIN_CHAT_ID=          # For webhook alerts (optional)
-SUPPORT_URL=            # Support link
-REFERRAL_TEXT=          # Invite message
+SUPPORT_URL=            # Support link (optional)
+REFERRAL_TEXT=          # Invite message (optional)
 ```
 
 ### Optional Security Variables
 ```ini
 TELEGRAM_SECRET_TOKEN=  # Webhook verification
 STROW_WEBHOOK_SECRET=   # HMAC signature
-STROW_PUBLIC_KEY=       # If required by API
 ```
+
+**Important:** All secrets are now stored in Replit Secrets (environment variables) for enhanced security. The .env file is no longer used in production.
 
 ## Deployment Notes
 
