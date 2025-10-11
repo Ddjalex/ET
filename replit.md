@@ -9,12 +9,13 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 - ✅ Initial project setup with PHP 8.2
 - ✅ Created dual webhook architecture (Telegram + StroWallet)
 - ✅ Implemented all core features: card creation, listing, user info, wallet, deposits
-- ✅ Built persistent reply keyboard UI with 6 buttons
+- ✅ Built persistent reply keyboard UI with 6 buttons (fixed: using is_persistent flag)
 - ✅ Added comprehensive error handling with Request ID display
 - ✅ Created environment configuration system using .env
 - ✅ Built API testing script for endpoint validation
 - ✅ Written complete deployment documentation (README.md)
 - ✅ Set up PHP development server for local testing
+- ✅ Fixed critical keyboard persistence bug (corrected from 'persistent' to 'is_persistent')
 
 ## Project Architecture
 
