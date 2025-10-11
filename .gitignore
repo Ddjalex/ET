@@ -1,0 +1,31 @@
+# Environment Configuration
+secrets/.env
+.env
+*.env
+!.env.example
+
+# Logs
+logs/
+*.log
+
+# PHP
+vendor/
+composer.lock
+*.cache
+
+# System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Temporary Files
+tmp/
+temp/
+*.tmp

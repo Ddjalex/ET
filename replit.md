@@ -1,0 +1,216 @@
+# Telegram Crypto Card Bot - Project Documentation
+
+## Overview
+A production-ready Telegram bot for managing virtual crypto cards through StroWallet API integration. Built with native PHP 8+ (no frameworks, no Composer dependencies) specifically designed for cPanel deployment.
+
+**Current State:** Development complete, ready for cPanel deployment with actual API keys.
+
+## Recent Changes (October 11, 2025)
+- ✅ Initial project setup with PHP 8.2
+- ✅ Created dual webhook architecture (Telegram + StroWallet)
+- ✅ Implemented all core features: card creation, listing, user info, wallet, deposits
+- ✅ Built persistent reply keyboard UI with 6 buttons
+- ✅ Added comprehensive error handling with Request ID display
+- ✅ Created environment configuration system using .env
+- ✅ Built API testing script for endpoint validation
+- ✅ Written complete deployment documentation (README.md)
+- ✅ Set up PHP development server for local testing
+
+## Project Architecture
+
+### File Structure
+```
+.
+├── public_html/bot/          # Public webhooks (cPanel deployment)
+│   ├── webhook.php          # Telegram bot webhook handler
+│   └── strowallet-webhook.php # StroWallet events webhook
+├── secrets/                  # Configuration (outside public_html)
+│   ├── .env                 # Active configuration (not in git)
+│   └── .env.example         # Configuration template
+├── scripts/
+│   └── test_endpoints.sh    # API connectivity validator
+├── README.md                # Deployment & troubleshooting guide
+└── replit.md               # This file
+```
+
+### Key Technologies
+- **Language:** PHP 8.2 (native, no frameworks)
+- **APIs:** Telegram Bot API, StroWallet API
+- **Deployment:** cPanel via webhooks (HTTPS required)
+- **Configuration:** parse_ini_file() with .env
+
+### API Integration
+- **Dual API Keys:**
+  - Admin Key: Card creation/management operations
+  - Personal Key: Wallet/profile data access
+- **Endpoints:**
+  - `/bitvcard/create-card/` - Create virtual cards
+  - `/bitvcard/fetch-card-detail/` - List cards
+  - `/user/profile` - User information
+  - `/wallet/balance` - Wallet balances
+  - `/wallet/deposit-address` - Generate deposit addresses
+
+### Webhook Architecture
+1. **Telegram Webhook** (`/bot/webhook.php`)
+   - Receives user commands and button presses
+   - Routes to appropriate handlers
+   - Sends formatted HTML responses with persistent keyboard
+   - Handles secret token verification (optional)
+
+2. **StroWallet Webhook** (`/bot/strowallet-webhook.php`)
+   - Receives deposit confirmations
+   - Sends admin alerts via Telegram
+   - Supports HMAC signature verification (optional)
+
+## User Preferences & Coding Style
+
+### Coding Conventions
+- Native PHP 8+ only (no Composer, no frameworks)
+- PSR-style function naming (camelCase)
+- Comprehensive error handling with user-friendly messages
+- Security-first: secrets outside public_html, never logged
+- HTML formatting for Telegram messages with emojis
+- Defensive coding: handle both nested and flat JSON responses
+
+### Bot UX Standards
+- Persistent reply keyboard always visible
+- Emoji-rich formatted messages
+- Request ID display on errors
+- Masked sensitive data (user IDs, transaction hashes)
+- KYC verification prompts for unverified users
+
+## Features Implemented
+
+### Core Bot Features ✅
+- [x] `/start` - Welcome message with keyboard
+- [x] `/create_card` - Create virtual USD card
+- [x] `/cards` - List all user cards
+- [x] `/userinfo` - Display profile with KYC status
+- [x] `/wallet` - Show wallet balances
+- [x] `/deposit_trc20` - Generate USDT deposit address
+- [x] `/invite` - Share referral message
+- [x] `/support` - Link to support
+
+### Reply Keyboard Buttons ✅
+- [x] ➕ Create Card
+- [x] 💳 My Cards
+- [x] 👤 User Info
+- [x] 💰 Wallet
+- [x] 💸 Invite Friends
+- [x] 🧑‍💻 Support
+
+### Webhook Features ✅
+- [x] Telegram webhook with secret token verification
+- [x] StroWallet webhook with HMAC verification stub
+- [x] Admin alerts for deposits
+- [x] Proper HTTP 200 responses
+
+### Error Handling ✅
+- [x] Auth failures (401/403)
+- [x] Wrong endpoints (404)
+- [x] Network errors
+- [x] Request ID display
+- [x] User-friendly error messages
+
+## Configuration Requirements
+
+### Required Environment Variables
+```ini
+BOT_TOKEN=              # From @BotFather
+STROW_BASE=             # https://strowallet.com/api
+STROW_ADMIN_KEY=        # For card operations
+STROW_PERSONAL_KEY=     # For wallet/profile
+ADMIN_CHAT_ID=          # For webhook alerts (optional)
+SUPPORT_URL=            # Support link
+REFERRAL_TEXT=          # Invite message
+```
+
+### Optional Security Variables
+```ini
+TELEGRAM_SECRET_TOKEN=  # Webhook verification
+STROW_WEBHOOK_SECRET=   # HMAC signature
+STROW_PUBLIC_KEY=       # If required by API
+```
+
+## Deployment Notes
+
+### cPanel Deployment Steps
+1. Upload `public_html/bot/` to website public directory
+2. Place `secrets/.env` outside public_html (in home directory)
+3. Ensure PHP 8.0+ with curl extension enabled
+4. Verify HTTPS/SSL certificate is active
+5. Set Telegram webhook to `https://yourdomain.com/bot/webhook.php`
+6. Configure StroWallet webhook to `https://yourdomain.com/bot/strowallet-webhook.php`
+7. Test with `scripts/test_endpoints.sh`
+
+### Security Checklist
+- [x] Secrets stored outside public_html
+- [x] .env excluded from git (.gitignore configured)
+- [x] API keys never logged or exposed
+- [x] HTTPS-only webhooks
+- [x] Optional secret token verification
+- [x] File permissions: 600 for .env, 644 for PHP files
+
+## Testing & Validation
+
+### API Testing
+Run `./scripts/test_endpoints.sh` to validate:
+- Admin API key connectivity
+- Personal API key connectivity  
+- Base URL configuration
+- Network connectivity
+
+### Webhook Testing
+```bash
+# Test Telegram webhook
+curl -X POST "https://yourdomain.com/bot/webhook.php" \
+  -H "Content-Type: application/json" \
+  -d '{"message":{"chat":{"id":123},"text":"/start"}}'
+
+# Test StroWallet webhook
+curl -X POST "https://yourdomain.com/bot/strowallet-webhook.php" \
+  -H "Content-Type: application/json" \
+  -d '{"event":"deposit_confirmed","data":{"amount":"100"}}'
+```
+
+## Known Limitations
+
+1. **Local Development:** PHP built-in server used for testing (replace with Apache/Nginx for production)
+2. **Placeholder Keys:** Default .env contains test keys (must replace with real StroWallet keys)
+3. **LSP Warnings:** PHP LSP shows false positives for forward function references (safe to ignore)
+4. **No Database:** All data fetched from StroWallet API (stateless bot)
+
+## Troubleshooting Guide
+
+### Common Issues
+1. **Bot not responding:** Verify webhook URL and SSL certificate
+2. **Auth failed:** Check API keys in .env file
+3. **Config not found:** Ensure .env path matches file structure
+4. **Webhook not triggering:** Confirm HTTPS and public accessibility
+
+See README.md for detailed troubleshooting steps.
+
+## Next Steps (Future Enhancements)
+
+### Potential Features
+- [ ] Card funding from wallet balance
+- [ ] Transaction history view
+- [ ] Card freeze/unfreeze controls
+- [ ] Multi-currency support
+- [ ] Enhanced admin dashboard
+- [ ] Rate limiting & anti-spam protection
+- [ ] User session management
+- [ ] Inline keyboard for card actions
+
+### Production Readiness
+- [ ] Replace test API keys with production keys
+- [ ] Enable Telegram secret token verification
+- [ ] Enable StroWallet HMAC verification
+- [ ] Set up proper logging and monitoring
+- [ ] Configure backup/failover webhooks
+- [ ] Implement rate limiting
+
+## Resources
+- StroWallet API: https://strowallet.readme.io
+- Telegram Bot API: https://core.telegram.org/bots/api
+- PHP 8 Documentation: https://www.php.net/docs.php

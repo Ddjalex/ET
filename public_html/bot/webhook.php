@@ -373,7 +373,7 @@ function sendMessage($chatId, $text, $showKeyboard = false) {
                 ]
             ],
             'resize_keyboard' => true,
-            'persistent' => true
+            'is_persistent' => true
         ]);
     }
     
