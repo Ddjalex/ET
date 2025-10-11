@@ -99,13 +99,24 @@ function handleStart($chatId) {
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
+    // Get Telegram user info
+    $userInfo = getTelegramUserInfo($chatId);
+    $customerEmail = $userInfo['email'];
+    
+    // Check if customer exists, create if not
+    $customer = ensureCustomerExists($chatId, $userId, $userInfo);
+    
+    if (!$customer) {
+        sendMessage($chatId, "❌ Unable to register your account. Please try again later.", true);
+        return;
+    }
+    
     $requestData = [
-        'name_on_card' => 'Virtual Card User',
+        'name_on_card' => $userInfo['first_name'],
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
         'amount' => '5',
-        'customerEmail' => STROWALLET_EMAIL,
-        'mode' => 'sandbox'
+        'customerEmail' => $customerEmail
     ];
     
     $result = callStroWalletAPI('/bitvcard/create-card/', 'POST', $requestData, true);
@@ -521,6 +532,85 @@ function formatDate($date) {
     }
     $timestamp = strtotime($date);
     return $timestamp ? date('d/m/Y', $timestamp) : $date;
+}
+
+// ==================== CUSTOMER MANAGEMENT ====================
+
+function getTelegramUserInfo($chatId) {
+    // Get user info from Telegram API
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/getChat';
+    $payload = ['chat_id' => $chatId];
+    
+    $ch = curl_init($url . '?' . http_build_query($payload));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    $data = json_decode($response, true);
+    $user = $data['result'] ?? [];
+    
+    $firstName = $user['first_name'] ?? 'User';
+    $lastName = $user['last_name'] ?? '';
+    $username = $user['username'] ?? '';
+    
+    // Generate email from Telegram username or user ID
+    $email = !empty($username) ? $username . '@telegram.user' : 'user_' . $chatId . '@telegram.user';
+    
+    return [
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'username' => $username,
+        'email' => strtolower($email),
+        'chat_id' => $chatId
+    ];
+}
+
+function ensureCustomerExists($chatId, $userId, $userInfo) {
+    $customerEmail = $userInfo['email'];
+    
+    // Check if customer exists
+    $checkResult = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($customerEmail), 'GET', [], true);
+    
+    // If customer exists, return true
+    if (isset($checkResult['data']) || isset($checkResult['customer'])) {
+        error_log("Customer exists: $customerEmail");
+        return true;
+    }
+    
+    // Customer doesn't exist, create one
+    sendMessage($chatId, "📝 <b>First Time Setup</b>\n\nCreating your customer profile in StroWallet...", false);
+    
+    $customerData = [
+        'public_key' => STROW_PUBLIC_KEY,
+        'firstName' => $userInfo['first_name'],
+        'lastName' => $userInfo['last_name'] ?: 'User',
+        'customerEmail' => $customerEmail,
+        'phoneNumber' => '1234567890', // Placeholder
+        'dateOfBirth' => '01/01/1990', // Placeholder
+        'houseNumber' => '1',
+        'line1' => 'Telegram Bot Address',
+        'city' => 'City',
+        'state' => 'State',
+        'zipCode' => '00000',
+        'country' => 'US',
+        'idType' => 'PASSPORT',
+        'idNumber' => 'TG' . $userId,
+        'idImage' => 'https://via.placeholder.com/300x200.png?text=ID',
+        'userPhoto' => 'https://via.placeholder.com/300x300.png?text=Photo'
+    ];
+    
+    $createResult = callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
+    
+    if (isset($createResult['error'])) {
+        error_log("Failed to create customer: " . json_encode($createResult));
+        sendMessage($chatId, "❌ Failed to create customer profile: " . ($createResult['error'] ?? 'Unknown error'), true);
+        return false;
+    }
+    
+    error_log("Customer created successfully: $customerEmail");
+    sendMessage($chatId, "✅ Customer profile created successfully!", false);
+    
+    return true;
 }
 
 // ==================== MOCK DATA FUNCTIONS ====================
