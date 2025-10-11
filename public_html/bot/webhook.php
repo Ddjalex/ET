@@ -523,10 +523,11 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
     // Real API call
     $url = STROW_BASE . $endpoint;
     
-    // Try without Authorization header - only public_key in body
+    // Prepare headers with Authorization Bearer token
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json'
+        'Accept: application/json',
+        'Authorization: Bearer ' . STROW_SECRET_KEY
     ];
     
     $ch = curl_init();
@@ -763,8 +764,8 @@ function downloadAndStoreTelegramFile($fileId, $userId, $fileType) {
             return null;
         }
         
-        // Create uploads directory if it doesn't exist
-        $uploadsDir = __DIR__ . '/../../uploads/kyc_documents';
+        // Create uploads directory inside public_html for direct access
+        $uploadsDir = __DIR__ . '/../uploads/kyc_documents';
         if (!is_dir($uploadsDir)) {
             mkdir($uploadsDir, 0755, true);
         }
@@ -780,9 +781,9 @@ function downloadAndStoreTelegramFile($fileId, $userId, $fileType) {
             return null;
         }
         
-        // Return the public URL (without bot token)
-        // This assumes your server serves files from /uploads/
-        $publicUrl = 'https://' . getenv('REPLIT_DEV_DOMAIN') . '/uploads/kyc_documents/' . $secureFilename;
+        // Return the public URL accessible from web server
+        $domain = getenv('REPLIT_DEV_DOMAIN');
+        $publicUrl = 'https://' . $domain . '/uploads/kyc_documents/' . $secureFilename;
         
         // Store file_id in database for reference (not the URL with token)
         storeFileReference($userId, $fileType, $fileId, $publicUrl);
