@@ -41,8 +41,9 @@ function getDBConnection() {
     
     try {
         $db = parse_url($dbUrl);
+        $port = $db['port'] ?? 5432; // Default PostgreSQL port
         $pdo = new PDO(
-            "pgsql:host={$db['host']};port={$db['port']};dbname=" . ltrim($db['path'], '/'),
+            "pgsql:host={$db['host']};port={$port};dbname=" . ltrim($db['path'], '/'),
             $db['user'],
             $db['pass']
         );
@@ -83,6 +84,23 @@ $chatId = $message['chat']['id'] ?? null;
 $text = trim($message['text'] ?? '');
 $userId = $message['from']['id'] ?? null;
 
+// Check for photo or document uploads
+$photo = $message['photo'] ?? null;
+$document = $message['document'] ?? null;
+$fileId = null;
+$fileUrl = null;
+
+if ($photo && is_array($photo) && count($photo) > 0) {
+    // Get the largest photo
+    $largestPhoto = end($photo);
+    $fileId = $largestPhoto['file_id'] ?? null;
+} elseif ($document) {
+    $fileId = $document['file_id'] ?? null;
+}
+
+// File URL will be set during registration flow when file type is known
+$fileUrl = null;
+
 if (!$chatId) {
     http_response_code(200);
     die('OK');
@@ -119,7 +137,7 @@ if ($text === '/continue') {
 
 // If user is in registration flow (not idle), route to registration handler
 if ($userState && $userState !== 'idle' && $userState !== 'completed') {
-    handleRegistrationFlow($chatId, $userId, $text, $userState);
+    handleRegistrationFlow($chatId, $userId, $text, $userState, $fileId);
     http_response_code(200);
     echo 'OK';
     exit;
@@ -692,28 +710,145 @@ function formatDate($date) {
 
 // ==================== REGISTRATION FLOW HANDLER ====================
 
-function handleRegistrationFlow($chatId, $userId, $text, $currentState) {
+function getRegistrationProgress($currentState) {
+    $steps = [
+        'awaiting_first_name' => ['step' => 1, 'total' => 15, 'name' => 'First Name'],
+        'awaiting_last_name' => ['step' => 2, 'total' => 15, 'name' => 'Last Name'],
+        'awaiting_dob' => ['step' => 3, 'total' => 15, 'name' => 'Date of Birth'],
+        'awaiting_phone' => ['step' => 4, 'total' => 15, 'name' => 'Phone Number'],
+        'awaiting_email' => ['step' => 5, 'total' => 15, 'name' => 'Email'],
+        'awaiting_house_number' => ['step' => 6, 'total' => 15, 'name' => 'House Number'],
+        'awaiting_address' => ['step' => 7, 'total' => 15, 'name' => 'Street Address'],
+        'awaiting_city' => ['step' => 8, 'total' => 15, 'name' => 'City'],
+        'awaiting_state' => ['step' => 9, 'total' => 15, 'name' => 'State/Province'],
+        'awaiting_zip' => ['step' => 10, 'total' => 15, 'name' => 'ZIP Code'],
+        'awaiting_country' => ['step' => 11, 'total' => 15, 'name' => 'Country'],
+        'awaiting_id_type' => ['step' => 12, 'total' => 15, 'name' => 'ID Type'],
+        'awaiting_id_number' => ['step' => 13, 'total' => 15, 'name' => 'ID Number'],
+        'awaiting_id_image' => ['step' => 14, 'total' => 15, 'name' => 'ID Image'],
+        'awaiting_user_photo' => ['step' => 15, 'total' => 15, 'name' => 'User Photo'],
+        'awaiting_confirmation' => ['step' => 16, 'total' => 16, 'name' => 'Review & Confirm']
+    ];
+    
+    $progress = $steps[$currentState] ?? ['step' => 0, 'total' => 15, 'name' => 'Unknown'];
+    $percentage = round(($progress['step'] / $progress['total']) * 100);
+    $bar = str_repeat('▓', (int)($percentage / 10)) . str_repeat('░', 10 - (int)($percentage / 10));
+    
+    return "📊 Step {$progress['step']}/{$progress['total']} | {$bar} {$percentage}%";
+}
+
+function downloadAndStoreTelegramFile($fileId, $userId, $fileType) {
+    if (!$fileId || !BOT_TOKEN) {
+        return null;
+    }
+    
+    try {
+        // Get file info from Telegram
+        $url = "https://api.telegram.org/bot" . BOT_TOKEN . "/getFile?file_id=" . urlencode($fileId);
+        $response = file_get_contents($url);
+        $data = json_decode($response, true);
+        
+        if (!$data || !$data['ok'] || !isset($data['result']['file_path'])) {
+            error_log("Failed to get file info for fileId: $fileId");
+            return null;
+        }
+        
+        $telegramFilePath = $data['result']['file_path'];
+        $fileUrl = "https://api.telegram.org/file/bot" . BOT_TOKEN . "/" . $telegramFilePath;
+        
+        // Download file content
+        $fileContent = file_get_contents($fileUrl);
+        if ($fileContent === false) {
+            error_log("Failed to download file from Telegram");
+            return null;
+        }
+        
+        // Create uploads directory if it doesn't exist
+        $uploadsDir = __DIR__ . '/../../uploads/kyc_documents';
+        if (!is_dir($uploadsDir)) {
+            mkdir($uploadsDir, 0755, true);
+        }
+        
+        // Generate secure filename
+        $extension = pathinfo($telegramFilePath, PATHINFO_EXTENSION) ?: 'jpg';
+        $secureFilename = $userId . '_' . $fileType . '_' . time() . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
+        $localPath = $uploadsDir . '/' . $secureFilename;
+        
+        // Save file locally
+        if (file_put_contents($localPath, $fileContent) === false) {
+            error_log("Failed to save file locally");
+            return null;
+        }
+        
+        // Return the public URL (without bot token)
+        // This assumes your server serves files from /uploads/
+        $publicUrl = 'https://' . getenv('REPLIT_DEV_DOMAIN') . '/uploads/kyc_documents/' . $secureFilename;
+        
+        // Store file_id in database for reference (not the URL with token)
+        storeFileReference($userId, $fileType, $fileId, $publicUrl);
+        
+        return $publicUrl;
+    } catch (Exception $e) {
+        error_log("Error in downloadAndStoreTelegramFile: " . $e->getMessage());
+        return null;
+    }
+}
+
+function storeFileReference($userId, $fileType, $fileId, $publicUrl) {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    try {
+        $fieldMap = [
+            'id_image' => ['url_field' => 'id_image_url', 'id_field' => 'id_image_file_id'],
+            'user_photo' => ['url_field' => 'user_photo_url', 'id_field' => 'user_photo_file_id']
+        ];
+        
+        if (!isset($fieldMap[$fileType])) {
+            return false;
+        }
+        
+        $urlField = $fieldMap[$fileType]['url_field'];
+        
+        $stmt = $pdo->prepare("
+            UPDATE user_registrations 
+            SET {$urlField} = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE telegram_user_id = ?
+        ");
+        return $stmt->execute([$publicUrl, $userId]);
+    } catch (PDOException $e) {
+        error_log("Error storing file reference: " . $e->getMessage());
+        return false;
+    }
+}
+
+function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId = null) {
     sendTypingAction($chatId);
+    
+    // Add progress indicator
+    $progress = getRegistrationProgress($currentState);
     
     switch ($currentState) {
         case 'awaiting_first_name':
             if (strlen($text) < 2) {
-                sendMessage($chatId, "❌ Please enter a valid first name (at least 2 characters).", false);
+                sendMessage($chatId, "$progress\n\n❌ Please enter a valid first name (at least 2 characters).", false);
                 return;
             }
             updateUserField($userId, 'first_name', $text);
             updateUserRegistrationState($userId, 'awaiting_last_name');
-            sendMessage($chatId, "✅ Got it!\n\n👤 <b>What's your last name?</b>", false);
+            $nextProgress = getRegistrationProgress('awaiting_last_name');
+            sendMessage($chatId, "$nextProgress\n\n✅ Got it!\n\n👤 <b>What's your last name?</b>", false);
             break;
             
         case 'awaiting_last_name':
             if (strlen($text) < 2) {
-                sendMessage($chatId, "❌ Please enter a valid last name (at least 2 characters).", false);
+                sendMessage($chatId, "$progress\n\n❌ Please enter a valid last name (at least 2 characters).", false);
                 return;
             }
             updateUserField($userId, 'last_name', $text);
             updateUserRegistrationState($userId, 'awaiting_dob');
-            $msg = "✅ Great!\n\n📅 <b>What's your date of birth?</b>\n\n";
+            $nextProgress = getRegistrationProgress('awaiting_dob');
+            $msg = "$nextProgress\n\n✅ Great!\n\n📅 <b>What's your date of birth?</b>\n\n";
             $msg .= "Format: <code>MM/DD/YYYY</code>\n";
             $msg .= "Example: <code>01/15/1990</code>";
             sendMessage($chatId, $msg, false);
@@ -823,45 +958,150 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState) {
             break;
             
         case 'awaiting_id_image':
-            if (!filter_var($text, FILTER_VALIDATE_URL) || !preg_match('/^https:\/\//i', $text)) {
-                sendMessage($chatId, "❌ Please send a valid HTTPS URL to your ID image.", false);
+            $idImageUrl = null;
+            
+            // If user uploaded a file (photo/document), download it securely
+            if ($fileId) {
+                $idImageUrl = downloadAndStoreTelegramFile($fileId, $userId, 'id_image');
+                if (!$idImageUrl) {
+                    sendMessage($chatId, "$progress\n\n❌ Failed to process your image. Please try again or send an HTTPS URL.", false);
+                    return;
+                }
+            } 
+            // If user sent a URL, validate it
+            elseif ($text && filter_var($text, FILTER_VALIDATE_URL) && preg_match('/^https:\/\//i', $text)) {
+                $idImageUrl = $text;
+                updateUserField($userId, 'id_image_url', $idImageUrl);
+            } 
+            // Invalid input
+            else {
+                $msg = "$progress\n\n";
+                $msg .= "❌ Please upload your ID image or send a valid HTTPS URL.\n\n";
+                $msg .= "💡 You can:\n";
+                $msg .= "• Send a photo directly from your device\n";
+                $msg .= "• Send a document file\n";
+                $msg .= "• Or paste an HTTPS URL";
+                sendMessage($chatId, $msg, false);
                 return;
             }
-            updateUserField($userId, 'id_image_url', $text);
+            
             updateUserRegistrationState($userId, 'awaiting_user_photo');
-            $msg = "✅ Perfect!\n\n🤳 <b>Upload your selfie/photo</b>\n\n";
-            $msg .= "Please send the HTTPS URL of your photo.\n";
-            $msg .= "Example: https://example.com/selfie.jpg";
+            
+            $msg = "$progress\n\n";
+            $msg .= "✅ ID image received!\n\n";
+            $msg .= "🤳 <b>Now upload your selfie/photo</b>\n\n";
+            $msg .= "💡 You can:\n";
+            $msg .= "• Send a photo directly from your device\n";
+            $msg .= "• Send a document file\n";
+            $msg .= "• Or paste an HTTPS URL";
             sendMessage($chatId, $msg, false);
             break;
             
         case 'awaiting_user_photo':
-            if (!filter_var($text, FILTER_VALIDATE_URL) || !preg_match('/^https:\/\//i', $text)) {
-                sendMessage($chatId, "❌ Please send a valid HTTPS URL to your photo.", false);
+            $userPhotoUrl = null;
+            
+            // If user uploaded a file (photo/document), download it securely
+            if ($fileId) {
+                $userPhotoUrl = downloadAndStoreTelegramFile($fileId, $userId, 'user_photo');
+                if (!$userPhotoUrl) {
+                    sendMessage($chatId, "$progress\n\n❌ Failed to process your photo. Please try again or send an HTTPS URL.", false);
+                    return;
+                }
+            }
+            // If user sent a URL, validate it
+            elseif ($text && filter_var($text, FILTER_VALIDATE_URL) && preg_match('/^https:\/\//i', $text)) {
+                $userPhotoUrl = $text;
+                updateUserField($userId, 'user_photo_url', $userPhotoUrl);
+            }
+            // Invalid input
+            else {
+                $msg = "$progress\n\n";
+                $msg .= "❌ Please upload your photo or send a valid HTTPS URL.\n\n";
+                $msg .= "💡 You can:\n";
+                $msg .= "• Send a photo directly from your device\n";
+                $msg .= "• Send a document file\n";
+                $msg .= "• Or paste an HTTPS URL";
+                sendMessage($chatId, $msg, false);
                 return;
             }
-            updateUserField($userId, 'user_photo_url', $text);
             
-            // All data collected, now create customer in StroWallet
-            $result = createStroWalletCustomerFromDB($userId);
+            updateUserRegistrationState($userId, 'awaiting_confirmation');
             
-            if (isset($result['error'])) {
-                updateUserRegistrationState($userId, 'failed');
-                $msg = "❌ <b>Registration Failed</b>\n\n";
-                $msg .= "Error: " . $result['error'] . "\n\n";
-                $msg .= "Please check your information and try /register again.";
-                sendMessage($chatId, $msg, true);
-            } else {
-                // Mark as completed
-                markUserRegistrationComplete($userId, $result['customer_id'] ?? '');
+            // Show review page
+            showRegistrationReview($chatId, $userId);
+            break;
+            
+        case 'awaiting_confirmation':
+            $text = strtolower(trim($text));
+            
+            if ($text === 'confirm' || $text === 'yes' || $text === '✅') {
+                // All data collected and confirmed, now create customer in StroWallet
+                sendMessage($chatId, "⏳ Creating your account in StroWallet...", false);
+                $result = createStroWalletCustomerFromDB($userId);
                 
-                $msg = "✅ <b>Registration Successful!</b>\n\n";
-                $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
-                $msg .= "You can now create virtual cards using ➕ <b>Create Card</b>";
-                sendMessage($chatId, $msg, true);
+                if (isset($result['error'])) {
+                    updateUserRegistrationState($userId, 'failed');
+                    $msg = "❌ <b>Registration Failed</b>\n\n";
+                    $msg .= "Error: " . $result['error'] . "\n\n";
+                    $msg .= "Please check your information and try /register again.";
+                    sendMessage($chatId, $msg, true);
+                } else {
+                    // Mark as completed
+                    markUserRegistrationComplete($userId, $result['customer_id'] ?? '');
+                    
+                    $msg = "✅ <b>Registration Successful!</b>\n\n";
+                    $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
+                    $msg .= "You can now create virtual cards using ➕ <b>Create Card</b>";
+                    sendMessage($chatId, $msg, true);
+                }
+            } elseif ($text === 'edit' || $text === 'cancel' || $text === '❌') {
+                updateUserRegistrationState($userId, 'idle');
+                sendMessage($chatId, "❌ Registration cancelled. Start over with /register", true);
+            } else {
+                sendMessage($chatId, "Please reply with 'CONFIRM' to proceed or 'CANCEL' to start over.", false);
             }
             break;
     }
+}
+
+// ==================== REGISTRATION REVIEW ====================
+
+function showRegistrationReview($chatId, $userId) {
+    $userData = getUserRegistrationData($userId);
+    
+    if (!$userData) {
+        sendMessage($chatId, "❌ Error loading your data. Please try /register again.", true);
+        return;
+    }
+    
+    $msg = "📋 <b>Review Your Information</b>\n\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n\n";
+    
+    $msg .= "👤 <b>Personal Details</b>\n";
+    $msg .= "• Name: {$userData['first_name']} {$userData['last_name']}\n";
+    $msg .= "• DOB: {$userData['date_of_birth']}\n";
+    $msg .= "• Phone: {$userData['phone_number']}\n";
+    $msg .= "• Email: {$userData['customer_email']}\n\n";
+    
+    $msg .= "🏠 <b>Address</b>\n";
+    $msg .= "• House: {$userData['house_number']}\n";
+    $msg .= "• Street: {$userData['address_line1']}\n";
+    $msg .= "• City: {$userData['city']}\n";
+    $msg .= "• State: {$userData['state']}\n";
+    $msg .= "• ZIP: {$userData['zip_code']}\n";
+    $msg .= "• Country: {$userData['country']}\n\n";
+    
+    $msg .= "🆔 <b>Identification</b>\n";
+    $msg .= "• Type: {$userData['id_type']}\n";
+    $msg .= "• Number: {$userData['id_number']}\n";
+    $msg .= "• ID Image: " . (strlen($userData['id_image_url']) > 50 ? substr($userData['id_image_url'], 0, 47) . '...' : $userData['id_image_url']) . "\n";
+    $msg .= "• Photo: " . (strlen($userData['user_photo_url']) > 50 ? substr($userData['user_photo_url'], 0, 47) . '...' : $userData['user_photo_url']) . "\n\n";
+    
+    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n\n";
+    $msg .= "✅ Reply <b>CONFIRM</b> to create your account\n";
+    $msg .= "❌ Reply <b>CANCEL</b> to start over";
+    
+    sendMessage($chatId, $msg, false);
 }
 
 // ==================== DATABASE HELPER FUNCTIONS ====================
