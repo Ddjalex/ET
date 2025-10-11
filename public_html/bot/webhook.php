@@ -21,6 +21,9 @@ define('SUPPORT_URL', getenv('SUPPORT_URL') ?: 'https://t.me/support');
 define('REFERRAL_TEXT', getenv('REFERRAL_TEXT') ?: 'Join me on StroWallet!');
 define('TELEGRAM_SECRET_TOKEN', getenv('TELEGRAM_SECRET_TOKEN') ?: '');
 
+// Mock mode for testing (set to true to use demo data)
+define('USE_MOCK_DATA', getenv('USE_MOCK_DATA') === 'true' || getenv('USE_MOCK_DATA') === '1');
+
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
     if ($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] !== TELEGRAM_SECRET_TOKEN) {
@@ -110,14 +113,18 @@ function handleCreateCard($chatId, $userId) {
     
     if (isset($cardData['card_id']) || isset($cardData['id'])) {
         $brand = $cardData['card_brand'] ?? $cardData['brand'] ?? 'Visa';
-        $last4 = substr($cardData['card_id'] ?? '****', -4);
+        $cardNumber = $cardData['card_number'] ?? ('****' . substr($cardData['card_id'] ?? '****', -4));
+        $last4 = substr($cardNumber, -4);
         $status = $cardData['card_status'] ?? $cardData['status'] ?? 'active';
         $statusEmoji = getStatusEmoji($status);
         
         $msg = "✅ <b>Card Created Successfully!</b>\n\n";
         $msg .= "💳 <b>Brand:</b> {$brand}\n";
-        $msg .= "🔢 <b>Card ID:</b> {$cardData['card_id']}\n";
+        $msg .= "🔢 <b>Number:</b> {$cardNumber}\n";
         $msg .= "{$statusEmoji} <b>Status:</b> " . ucfirst($status) . "\n\n";
+        if (USE_MOCK_DATA) {
+            $msg .= "<i>🧪 Demo Mode - Using test data</i>\n\n";
+        }
         $msg .= "ℹ️ Your new virtual card is ready to use!";
         
         sendMessage($chatId, $msg, true);
@@ -299,6 +306,27 @@ function handleSupport($chatId) {
 // ==================== STROWALLET API ====================
 
 function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey = true) {
+    // Use mock data if enabled
+    if (USE_MOCK_DATA) {
+        usleep(500000); // Simulate API delay (0.5 seconds)
+        
+        if (strpos($endpoint, '/create-card') !== false) {
+            return getMockCardData();
+        } elseif (strpos($endpoint, '/fetch-card-detail') !== false) {
+            return getMockCardsList();
+        } elseif (strpos($endpoint, '/user/profile') !== false || strpos($endpoint, '/getcardholder') !== false) {
+            return getMockUserInfo();
+        } elseif (strpos($endpoint, '/wallet/balance') !== false) {
+            return getMockWalletBalance();
+        } elseif (strpos($endpoint, '/deposit-address') !== false) {
+            return getMockDepositAddress();
+        }
+        
+        // Default mock response
+        return ['success' => true, 'message' => 'Mock response'];
+    }
+    
+    // Real API call
     $url = STROW_BASE . $endpoint;
     
     // Try without Authorization header - only public_key in body
@@ -475,4 +503,89 @@ function formatDate($date) {
     }
     $timestamp = strtotime($date);
     return $timestamp ? date('d/m/Y', $timestamp) : $date;
+}
+
+// ==================== MOCK DATA FUNCTIONS ====================
+
+function getMockCardData() {
+    return [
+        'success' => true,
+        'data' => [
+            'card_id' => 'DEMO_' . strtoupper(substr(md5(time()), 0, 8)),
+            'card_brand' => 'Visa',
+            'card_number' => '4532********' . rand(1000, 9999),
+            'card_status' => 'active',
+            'balance' => '5.00',
+            'currency' => 'USD',
+            'created_at' => date('Y-m-d H:i:s')
+        ]
+    ];
+}
+
+function getMockCardsList() {
+    return [
+        'success' => true,
+        'data' => [
+            [
+                'card_id' => 'DEMO_CARD_001',
+                'card_brand' => 'Visa',
+                'card_number' => '4532********1234',
+                'card_status' => 'active',
+                'balance' => '25.50',
+                'currency' => 'USD'
+            ],
+            [
+                'card_id' => 'DEMO_CARD_002',
+                'card_brand' => 'Mastercard',
+                'card_number' => '5425********5678',
+                'card_status' => 'active',
+                'balance' => '100.00',
+                'currency' => 'USD'
+            ]
+        ]
+    ];
+}
+
+function getMockUserInfo() {
+    return [
+        'success' => true,
+        'data' => [
+            'firstName' => 'Demo',
+            'lastName' => 'User',
+            'customerEmail' => STROWALLET_EMAIL ?: 'demo@strowallet.com',
+            'phoneNumber' => '+1234567890',
+            'customerId' => 'DEMO_' . strtoupper(substr(md5('user'), 0, 8)),
+            'kycStatus' => 'verified',
+            'kycLevel' => 2,
+            'joined' => date('Y-m-d', strtotime('-30 days')),
+            'cardCount' => 2,
+            'maxCards' => 10,
+            'points' => 150,
+            'referrals' => 5
+        ]
+    ];
+}
+
+function getMockWalletBalance() {
+    return [
+        'success' => true,
+        'data' => [
+            'balances' => [
+                ['currency' => 'USD', 'amount' => '125.50'],
+                ['currency' => 'USDT', 'amount' => '200.00']
+            ]
+        ]
+    ];
+}
+
+function getMockDepositAddress() {
+    return [
+        'success' => true,
+        'data' => [
+            'address' => 'TDemo' . strtoupper(substr(md5(time()), 0, 32)),
+            'network' => 'TRC20',
+            'currency' => 'USDT',
+            'qr_code' => 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=TDemo'
+        ]
+    ];
 }
