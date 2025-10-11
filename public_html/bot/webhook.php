@@ -18,6 +18,7 @@ define('STROW_BASE', rtrim($env['STROW_BASE'] ?? 'https://strowallet.com/api', '
 define('STROW_ADMIN_KEY', $env['STROW_ADMIN_KEY'] ?? '');
 define('STROW_PERSONAL_KEY', $env['STROW_PERSONAL_KEY'] ?? '');
 define('STROW_PUBLIC_KEY', $env['STROW_PUBLIC_KEY'] ?? '');
+define('STROWALLET_EMAIL', $env['STROWALLET_EMAIL'] ?? '');
 define('ADMIN_CHAT_ID', $env['ADMIN_CHAT_ID'] ?? '');
 define('SUPPORT_URL', $env['SUPPORT_URL'] ?? '');
 define('REFERRAL_TEXT', $env['REFERRAL_TEXT'] ?? '');
@@ -89,7 +90,15 @@ function handleStart($chatId) {
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
-    $result = callStroWalletAPI('/bitvcard/create-card/', 'POST', [], true);
+    $requestData = [
+        'name_on_card' => 'Virtual Card User',
+        'card_type' => 'visa',
+        'public_key' => STROW_PUBLIC_KEY,
+        'amount' => '5',
+        'customerEmail' => STROWALLET_EMAIL
+    ];
+    
+    $result = callStroWalletAPI('/bitvcard/create-card/', 'POST', $requestData, true);
     
     if (isset($result['error'])) {
         sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
@@ -97,23 +106,25 @@ function handleCreateCard($chatId, $userId) {
     }
     
     // Handle both nested and flat response formats
-    $cardData = $result['data'] ?? $result;
+    $cardData = $result['response'] ?? $result['data'] ?? $result;
     
     if (isset($cardData['card_id']) || isset($cardData['id'])) {
-        $brand = $cardData['brand'] ?? $cardData['card_brand'] ?? 'Visa';
-        $last4 = $cardData['last4'] ?? $cardData['last_four'] ?? '****';
-        $status = $cardData['status'] ?? 'active';
+        $brand = $cardData['card_brand'] ?? $cardData['brand'] ?? 'Visa';
+        $last4 = substr($cardData['card_id'] ?? '****', -4);
+        $status = $cardData['card_status'] ?? $cardData['status'] ?? 'active';
         $statusEmoji = getStatusEmoji($status);
         
         $msg = "✅ <b>Card Created Successfully!</b>\n\n";
         $msg .= "💳 <b>Brand:</b> {$brand}\n";
-        $msg .= "🔢 <b>Last 4 Digits:</b> ••••{$last4}\n";
+        $msg .= "🔢 <b>Card ID:</b> {$cardData['card_id']}\n";
         $msg .= "{$statusEmoji} <b>Status:</b> " . ucfirst($status) . "\n\n";
         $msg .= "ℹ️ Your new virtual card is ready to use!";
         
         sendMessage($chatId, $msg, true);
     } else {
-        sendMessage($chatId, "✅ Card creation initiated successfully!", true);
+        $msg = "✅ Card creation response received!\n\n";
+        $msg .= "Response: " . json_encode($result, JSON_PRETTY_PRINT);
+        sendMessage($chatId, $msg, true);
     }
 }
 
@@ -289,17 +300,11 @@ function handleSupport($chatId) {
 
 function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey = true) {
     $url = STROW_BASE . $endpoint;
-    $apiKey = $useAdminKey ? STROW_ADMIN_KEY : STROW_PERSONAL_KEY;
     
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json',
-        'Authorization: Bearer ' . $apiKey
+        'Accept: application/json'
     ];
-    
-    if (!empty(STROW_PUBLIC_KEY)) {
-        $headers[] = 'X-Public-Key: ' . STROW_PUBLIC_KEY;
-    }
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
