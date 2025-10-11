@@ -145,7 +145,7 @@ if ($userState && $userState !== 'idle' && $userState !== 'completed') {
 
 // Route commands and button presses
 if ($text === '/start' || $text === '🏠 Menu') {
-    handleStart($chatId);
+    handleStart($chatId, $userId);
 } elseif ($text === '/register') {
     handleRegisterStart($chatId, $userId);
 } elseif ($text === '/quickregister') {
@@ -174,12 +174,36 @@ exit;
 
 // ==================== COMMAND HANDLERS ====================
 
-function handleStart($chatId) {
-    $welcomeMsg = "🎉 <b>Welcome to Crypto Card Bot!</b>\n\n";
-    $welcomeMsg .= "🚀 Manage your virtual cards and crypto wallet with ease.\n\n";
-    $welcomeMsg .= "📱 Use the menu below to get started:";
+function handleStart($chatId, $userId = null) {
+    // Check if user is registered
+    $userData = getUserRegistrationData($userId);
     
-    sendMessage($chatId, $welcomeMsg, true);
+    if (!$userData || !$userData['is_registered']) {
+        // New/unregistered user - prompt for registration
+        $welcomeMsg = "👋 <b>Welcome to Crypto Card Bot!</b>\n\n";
+        $welcomeMsg .= "🎉 Manage your virtual crypto cards with ease.\n\n";
+        $welcomeMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $welcomeMsg .= "⚠️ <b>Registration Required</b>\n\n";
+        $welcomeMsg .= "To create virtual cards and use this bot, you need to complete a one-time registration.\n\n";
+        $welcomeMsg .= "📋 <b>What we'll collect:</b>\n";
+        $welcomeMsg .= "• Personal information (name, DOB, phone)\n";
+        $welcomeMsg .= "• Address details\n";
+        $welcomeMsg .= "• ID verification (KYC documents)\n\n";
+        $welcomeMsg .= "⏱️ <b>Time:</b> About 5 minutes\n";
+        $welcomeMsg .= "🔒 <b>Security:</b> All data encrypted & secure\n\n";
+        $welcomeMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $welcomeMsg .= "🚀 <b>Ready to get started?</b>\n\n";
+        $welcomeMsg .= "Send /register to begin your registration!";
+        
+        sendMessage($chatId, $welcomeMsg, false);
+    } else {
+        // Registered user - show normal welcome
+        $welcomeMsg = "🎉 <b>Welcome Back!</b>\n\n";
+        $welcomeMsg .= "🚀 Manage your virtual cards and crypto wallet with ease.\n\n";
+        $welcomeMsg .= "📱 Use the menu below to get started:";
+        
+        sendMessage($chatId, $welcomeMsg, true);
+    }
 }
 
 function handleRegisterStart($chatId, $userId) {

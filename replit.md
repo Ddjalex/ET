@@ -37,7 +37,9 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 - ✅ **CRITICAL FIXES (Latest):**
   - **Fixed "Auth failed" error**: Added missing Authorization Bearer header to all StroWallet API calls
   - **Fixed KYC images not showing**: Relocated uploads to public_html/uploads/kyc_documents for web accessibility
-  - **Architect verified**: Both issues resolved and ready for production testing
+  - **Fixed bot not responding**: Configured Telegram webhook to Replit server
+  - **Improved UX**: /start command now checks registration status and prompts new users to register
+  - **Architect verified**: All issues resolved and ready for production testing
 
 ## Project Architecture
 
