@@ -1,0 +1,192 @@
+A PHP 8+ Telegram bot that:
+
+Shows a reply-keyboard: + Create Card · 💳 My Cards · 👤 User Info · 💰 Wallet · 💸 Invite Friends · 🧑‍💻 Support
+
+Implements commands/aliases: /start, /create_card, /cards, /userinfo, /wallet, /deposit_trc20, /invite, /support
+
+Talks to StroWallet for: create customer (KYC), create card, fund card, fetch card details & transactions, freeze/unfreeze, and full card history
+
+Can run locally via long-polling (getUpdates) now, and later switch to webhook easily
+
+Reference for all endpoints, fields, and base URLs is in the attached StroWallet API – Comprehensive Documentation. 
+
+strowallet_api_docs
+
+2) Environment variables (secrets)
+
+Load via .env or Replit Secrets:
+
+BOT_TOKEN — Telegram bot token
+
+STROWALLET_EMAIL — your StroWallet login email (used for profile UX if needed)
+
+STROW_PUBLIC_KEY — public_key from StroWallet → User → API Key (starts with pub_…)
+
+STROW_SECRET_KEY — if your plan requires sending secret with a header (keep available; some flows only need public_key)
+
+ADMIN_CHAT_ID — Telegram chat ID to receive admin alerts (optional)
+
+SUPPORT_URL — link for the Support button (e.g., https://t.me/YourSupport)
+
+REFERRAL_TEXT — plain one-line invite text for the Invite button
+
+MODE — "sandbox" during testing where supported (optional)
+
+Notes
+• The PDF shows most endpoints authenticate by including public_key in the JSON body; keep STROW_PUBLIC_KEY mandatory.
+• If your account also expects headers (e.g., Authorization: Bearer <sec_…> or X-Public-Key), read them from STROW_SECRET_KEY / STROW_PUBLIC_KEY. (Keep the header logic pluggable.)
+
+3) Base URLs and key endpoints (map once, reuse)
+
+Base (per PDF): https://strowallet.com/api/bitvcard
+
+Customers (KYC)
+
+POST /create-user/ – register customer (KYC)
+
+GET /getcardholder/ – fetch customer by id/email
+
+PUT /updateCardCustomer/ – update KYC/profile
+
+Cards
+
+POST /create-card/ – create card (name_on_card, card_type, amount, customerEmail, public_key, optional mode:"sandbox")
+
+POST /fund-card/ – fund card (card_id, amount, public_key, mode)
+
+POST /fetch-card-detail/ – card details (card_id, public_key)
+
+POST /card-transactions/ – recent tx for a card (card_id, public_key)
+
+POST /action/status/ – freeze / unfreeze (action, card_id, public_key)
+
+GET /apicard-transactions/ – full paginated history (card_id, page, take, public_key)
+(All above are from the PDF; keep parameters and casing exactly as shown.) 
+
+strowallet_api_docs
+
+4) Bot → StroWallet feature mapping
+A) /start + keyboard
+
+Send a welcome and always attach the reply keyboard with the six buttons above.
+
+B) + Create Card (/create_card)
+
+If first-time user: optionally call Create Customer to register KYC (you’ll need firstName, lastName, customerEmail, phoneNumber, dateOfBirth, doc URLs, etc., plus public_key).
+
+Then call Create Card with:
+
+name_on_card = Telegram first_name (or user input)
+
+card_type = "visa" (or what your plan supports)
+
+amount = small initial load if required (e.g., "5")
+
+customerEmail = their email (from your flow)
+
+public_key, and mode:"sandbox" during tests
+
+On success, show: Brand • **** last4 • Status.
+
+C) 💳 My Cards (/cards)
+
+Either:
+
+Keep a local store of card IDs per Telegram user and call fetch-card-detail for each, or
+
+If your plan supports listing by customer, call that list endpoint (else skip).
+
+Render each line as: • BRAND • **** LAST4 (STATUS).
+
+D) 👤 User Info (/userinfo)
+
+Compose from:
+
+Get Customer → name, phone, email, KYC status, joined date
+
+Create Customer response you saved earlier (for customerId)
+
+Card count (how many created) and a fixed max (e.g., 10)
+
+(Optional) Wallet balance if your plan returns it; else show $0.00
+
+If KYC is not verified, append the benefits note (higher limits, etc.).
+
+E) 💰 Wallet (/wallet) and /deposit_trc20
+
+PDF doesn’t include a “generic wallet address” endpoint in bitvcard scope; typical flows fund the card directly using fund-card. If you also have a USDT deposit address/ledger in another StroWallet scope, expose a button Get USDT (TRC20) Address that:
+
+Calls your configured address endpoint (if available in your plan), or
+
+Explains that top-ups are done with Fund Card (enter amount in bot → bot calls fund-card).
+
+Always show current card balance (from fetch-card-detail) or recent transactions.
+
+F) Freeze/Unfreeze
+
+Add a per-card inline action: call action/status with freeze or unfreeze.
+
+G) 💸 Invite Friends (/invite)
+
+Return REFERRAL_TEXT from env. Keep it one line.
+
+H) 🧑‍💻 Support (/support)
+
+Return SUPPORT_URL as a clickable link.
+
+5) Transport layer (make two modes)
+Mode 1 — Local long-polling (for now)
+
+A CLI loop calls getUpdates?timeout=50&offset=<last+1> and handles messages.
+
+Treat button labels as aliases of the slash commands (e.g., “+ Create Card” → /create_card).
+
+Persist last_update_id to a small file to avoid duplicates.
+
+Mode 2 — Webhook (later, optional)
+
+Single webhook.php endpoint to handle Telegram updates over HTTPS.
+
+Add a StroWallet webhook receiver for events like card.created, card.funded, etc. (verify signature if header is provided; de-duplicate events by id). The PDF shows a generic webhook shape and recommends signature verification; follow that guidance. 
+
+strowallet_api_docs
+
+6) HTTP & error handling
+
+All StroWallet calls:
+
+Use Content-Type: application/json (where required)
+
+Include public_key in body (per PDF)
+
+Include mode:"sandbox" during test where supported
+
+Normalize errors to short user messages; log full JSON internally.
+
+If the response includes a request id or event id, include it at the end of your error text for support.
+
+7) Minimal persistence
+
+Keep a tiny store (SQLite or JSON file) mapping:
+
+Telegram user id → customerEmail, customerId, known card_id[]
+
+This lets you show “My Cards” quickly and target the right card for freeze/unfreeze.
+
+8) Acceptance checklist
+
+/start shows keyboard and help.
+
+/create_card creates a card (visible in StroWallet) and replies with brand/last4/status.
+
+/cards lists at least one card line with mask and status.
+
+/userinfo shows name, phone, KYC status emoji, user id/email, joined date, card count/limit, and a balance field.
+
+/wallet displays balance/last tx or a clear top-up path (fund-card).
+
+/deposit_trc20 returns an address only if your plan supports it; otherwise show how to top-up via fund-card.
+
+(Optional) Freeze/unfreeze works per card.
+
+Errors are friendly and secrets are never echoed.

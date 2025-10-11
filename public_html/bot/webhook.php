@@ -33,6 +33,9 @@ if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECR
 $input = file_get_contents('php://input');
 $update = json_decode($input, true);
 
+// Debug log
+error_log("Webhook received: " . $input);
+
 if (!$update) {
     http_response_code(400);
     die('Invalid JSON');
