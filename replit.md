@@ -26,7 +26,14 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 - ✅ **NEW:** Implemented customer verification system - checks if customer exists before card creation
 - ✅ **NEW:** Added HTTP status-based error handling (404=customer missing, 401/403=auth error, 5xx=server error)
 - ✅ **Architect Approved:** Production-ready implementation with proper error messaging
-- ⚠️ **Setup Required:** Customer must be manually created in StroWallet dashboard with verified KYC
+- ✅ **NEW FEATURE:** Customer Registration System (October 11, 2025)
+  - Added `/register` command - Shows all registration options
+  - Added `/quickregister` command - Automated customer creation via environment variables
+  - Integrated StroWallet create-user API endpoint
+  - Enhanced card creation flow with registration prompts
+  - Created comprehensive documentation (CUSTOMER_REGISTRATION.md)
+  - Supports environment-based customer data configuration
+  - Full compliance with KYC requirements (no fake data)
 
 ## Project Architecture
 
@@ -56,6 +63,8 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
   - Admin Key: Card creation/management operations
   - Personal Key: Wallet/profile data access
 - **Endpoints:**
+  - `/bitvcard/create-user/` - Create customer (NEW)
+  - `/bitvcard/getcardholder/` - Check customer exists (NEW)
   - `/bitvcard/create-card/` - Create virtual cards
   - `/bitvcard/fetch-card-detail/` - List cards
   - `/user/profile` - User information
@@ -95,6 +104,8 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 ### Core Bot Features ✅
 - [x] `/start` - Welcome message with keyboard
+- [x] `/register` - View customer registration options (NEW)
+- [x] `/quickregister` - Automated customer creation (NEW)
 - [x] `/create_card` - Create virtual USD card
 - [x] `/cards` - List all user cards
 - [x] `/userinfo` - Display profile with KYC status

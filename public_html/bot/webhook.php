@@ -64,6 +64,10 @@ if (!$chatId) {
 // Route commands and button presses
 if ($text === '/start' || $text === '🏠 Menu') {
     handleStart($chatId);
+} elseif ($text === '/register') {
+    handleRegister($chatId);
+} elseif ($text === '/quickregister') {
+    handleQuickRegister($chatId, $userId);
 } elseif ($text === '/create_card' || $text === '➕ Create Card') {
     handleCreateCard($chatId, $userId);
 } elseif ($text === '/cards' || $text === '💳 My Cards') {
@@ -96,6 +100,25 @@ function handleStart($chatId) {
     sendMessage($chatId, $welcomeMsg, true);
 }
 
+function handleRegister($chatId) {
+    $msg = "📝 <b>Customer Registration</b>\n\n";
+    $msg .= "To create virtual cards, you need to register as a customer in StroWallet.\n\n";
+    $msg .= "<b>Two Options:</b>\n\n";
+    $msg .= "1️⃣ <b>Manual Registration (Recommended)</b>\n";
+    $msg .= "   • Log into <a href='https://strowallet.com/dashboard'>StroWallet Dashboard</a>\n";
+    $msg .= "   • Go to Card Holders → Create New\n";
+    $msg .= "   • Complete full KYC verification\n";
+    $msg .= "   • Use email: <code>" . STROWALLET_EMAIL . "</code>\n\n";
+    $msg .= "2️⃣ <b>Quick Setup (Uses Environment Config)</b>\n";
+    $msg .= "   • Uses pre-configured data from environment variables\n";
+    $msg .= "   • Requires admin setup with real KYC documents\n";
+    $msg .= "   • Send /quickregister to proceed\n\n";
+    $msg .= "⚠️ <b>Important:</b> Real KYC documents are required for compliance.\n";
+    $msg .= "Never use fake or placeholder data.";
+    
+    sendMessage($chatId, $msg, true);
+}
+
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
@@ -116,15 +139,18 @@ function handleCreateCard($chatId, $userId) {
         
         // Handle different error types
         if ($httpCode === 404) {
-            // Customer not found - provide setup instructions
+            // Customer not found - offer registration options
             $msg = "❌ <b>Customer Not Found</b>\n\n";
             $msg .= "No customer with email <code>$customerEmail</code> exists in StroWallet.\n\n";
-            $msg .= "📝 <b>Setup Required:</b>\n";
-            $msg .= "1. Log into StroWallet dashboard\n";
-            $msg .= "2. Go to Card Holders → Create New\n";
-            $msg .= "3. Create customer with email: <code>$customerEmail</code>\n";
-            $msg .= "4. Complete KYC verification\n";
-            $msg .= "5. Try creating a card again";
+            $msg .= "📝 <b>Registration Options:</b>\n\n";
+            $msg .= "1️⃣ <b>Quick Setup:</b> /quickregister\n";
+            $msg .= "   • Uses pre-configured KYC data\n";
+            $msg .= "   • Requires admin to set up environment variables\n\n";
+            $msg .= "2️⃣ <b>Manual Setup:</b>\n";
+            $msg .= "   • Log into <a href='https://strowallet.com/dashboard'>StroWallet Dashboard</a>\n";
+            $msg .= "   • Go to Card Holders → Create New\n";
+            $msg .= "   • Complete KYC verification\n\n";
+            $msg .= "3️⃣ <b>View All Options:</b> /register";
             sendMessage($chatId, $msg, true);
         } elseif ($httpCode === 401 || $httpCode === 403) {
             // Auth error
@@ -571,6 +597,94 @@ function formatDate($date) {
 }
 
 // ==================== CUSTOMER MANAGEMENT ====================
+
+function handleQuickRegister($chatId, $userId) {
+    sendTypingAction($chatId);
+    
+    $customerEmail = STROWALLET_EMAIL;
+    
+    if (empty($customerEmail)) {
+        sendMessage($chatId, "❌ <b>Configuration Error</b>\n\nSTROWALLET_EMAIL is not configured. Please contact administrator.", true);
+        return;
+    }
+    
+    // Check if customer already exists
+    $customerCheck = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($customerEmail), 'GET', [], true);
+    
+    if (!isset($customerCheck['error'])) {
+        $msg = "✅ <b>Customer Already Exists</b>\n\n";
+        $msg .= "A customer with email <code>$customerEmail</code> is already registered.\n\n";
+        $msg .= "You can now create cards using ➕ <b>Create Card</b>";
+        sendMessage($chatId, $msg, true);
+        return;
+    }
+    
+    // Create customer using environment config
+    $result = createStroWalletCustomer($customerEmail);
+    
+    if (isset($result['error'])) {
+        $msg = "❌ <b>Registration Failed</b>\n\n";
+        $msg .= "Could not create customer in StroWallet.\n\n";
+        $msg .= "📝 <b>Error:</b> " . $result['error'] . "\n\n";
+        $msg .= "Please use manual registration or contact administrator.";
+        sendMessage($chatId, $msg, true);
+        return;
+    }
+    
+    $msg = "✅ <b>Customer Registered Successfully!</b>\n\n";
+    $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
+    $msg .= "📧 <b>Email:</b> <code>$customerEmail</code>\n\n";
+    $msg .= "You can now create virtual cards using ➕ <b>Create Card</b>";
+    sendMessage($chatId, $msg, true);
+}
+
+function createStroWalletCustomer($customerEmail) {
+    // Get required environment variables
+    $firstName = getenv('CUSTOMER_FIRST_NAME') ?: 'User';
+    $lastName = getenv('CUSTOMER_LAST_NAME') ?: 'Account';
+    $phoneNumber = getenv('CUSTOMER_PHONE') ?: '2348000000000';
+    $dateOfBirth = getenv('CUSTOMER_DOB') ?: '01/01/1990';
+    $houseNumber = getenv('CUSTOMER_HOUSE_NUMBER') ?: '1';
+    $line1 = getenv('CUSTOMER_ADDRESS') ?: '123 Main Street';
+    $city = getenv('CUSTOMER_CITY') ?: 'Lagos';
+    $state = getenv('CUSTOMER_STATE') ?: 'Lagos';
+    $zipCode = getenv('CUSTOMER_ZIP') ?: '100001';
+    $country = getenv('CUSTOMER_COUNTRY') ?: 'NG';
+    $idType = getenv('CUSTOMER_ID_TYPE') ?: 'PASSPORT';
+    $idNumber = getenv('CUSTOMER_ID_NUMBER') ?: 'A00000000';
+    $idImage = getenv('CUSTOMER_ID_IMAGE') ?: '';
+    $userPhoto = getenv('CUSTOMER_PHOTO') ?: '';
+    
+    // Validate required fields
+    if (empty($idImage) || empty($userPhoto)) {
+        return [
+            'error' => 'Missing KYC documents. Please set CUSTOMER_ID_IMAGE and CUSTOMER_PHOTO environment variables with valid URLs.'
+        ];
+    }
+    
+    // Prepare customer data according to StroWallet API docs
+    $customerData = [
+        'public_key' => STROW_PUBLIC_KEY,
+        'houseNumber' => $houseNumber,
+        'firstName' => $firstName,
+        'lastName' => $lastName,
+        'idNumber' => $idNumber,
+        'customerEmail' => $customerEmail,
+        'phoneNumber' => $phoneNumber,
+        'dateOfBirth' => $dateOfBirth,
+        'idImage' => $idImage,
+        'userPhoto' => $userPhoto,
+        'line1' => $line1,
+        'state' => $state,
+        'zipCode' => $zipCode,
+        'city' => $city,
+        'country' => $country,
+        'idType' => $idType
+    ];
+    
+    // Call StroWallet create-user API
+    return callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
+}
 
 function getTelegramUserInfo($chatId) {
     // Get user info from Telegram API
