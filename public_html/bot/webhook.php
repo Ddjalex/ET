@@ -27,6 +27,33 @@ define('USE_MOCK_DATA', getenv('USE_MOCK_DATA') === 'true' || getenv('USE_MOCK_D
 // Sandbox mode for StroWallet API (bypasses IP whitelist)
 define('USE_SANDBOX_MODE', false);
 
+// Database configuration
+define('DATABASE_URL', getenv('DATABASE_URL') ?: '');
+
+// ==================== DATABASE CONNECTION ====================
+
+function getDBConnection() {
+    $dbUrl = DATABASE_URL;
+    if (empty($dbUrl)) {
+        error_log("DATABASE_URL not configured");
+        return null;
+    }
+    
+    try {
+        $db = parse_url($dbUrl);
+        $pdo = new PDO(
+            "pgsql:host={$db['host']};port={$db['port']};dbname=" . ltrim($db['path'], '/'),
+            $db['user'],
+            $db['pass']
+        );
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $pdo;
+    } catch (PDOException $e) {
+        error_log("Database connection failed: " . $e->getMessage());
+        return null;
+    }
+}
+
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
     if ($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] !== TELEGRAM_SECRET_TOKEN) {
@@ -61,11 +88,48 @@ if (!$chatId) {
     die('OK');
 }
 
+// Check if user is in registration flow
+$userState = getUserRegistrationState($userId);
+
+// Handle cancel command
+if ($text === '/cancel') {
+    if ($userState && $userState !== 'idle' && $userState !== 'completed') {
+        updateUserRegistrationState($userId, 'idle');
+        sendMessage($chatId, "❌ Registration cancelled. You can start again with /register", true);
+    } else {
+        sendMessage($chatId, "Nothing to cancel.", true);
+    }
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
+// Handle continue command
+if ($text === '/continue') {
+    if ($userState && $userState !== 'idle' && $userState !== 'completed') {
+        // Re-prompt for the current field
+        promptForCurrentField($chatId, $userState);
+    } else {
+        sendMessage($chatId, "Nothing to continue. Use /register to start.", true);
+    }
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
+// If user is in registration flow (not idle), route to registration handler
+if ($userState && $userState !== 'idle' && $userState !== 'completed') {
+    handleRegistrationFlow($chatId, $userId, $text, $userState);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // Route commands and button presses
 if ($text === '/start' || $text === '🏠 Menu') {
     handleStart($chatId);
 } elseif ($text === '/register') {
-    handleRegister($chatId);
+    handleRegisterStart($chatId, $userId);
 } elseif ($text === '/quickregister') {
     handleQuickRegister($chatId, $userId);
 } elseif ($text === '/create_card' || $text === '➕ Create Card') {
@@ -100,30 +164,60 @@ function handleStart($chatId) {
     sendMessage($chatId, $welcomeMsg, true);
 }
 
-function handleRegister($chatId) {
-    $msg = "📝 <b>Customer Registration</b>\n\n";
-    $msg .= "To create virtual cards, you need to register as a customer in StroWallet.\n\n";
-    $msg .= "<b>Two Options:</b>\n\n";
-    $msg .= "1️⃣ <b>Manual Registration (Recommended)</b>\n";
-    $msg .= "   • Log into <a href='https://strowallet.com/dashboard'>StroWallet Dashboard</a>\n";
-    $msg .= "   • Go to Card Holders → Create New\n";
-    $msg .= "   • Complete full KYC verification\n";
-    $msg .= "   • Use email: <code>" . STROWALLET_EMAIL . "</code>\n\n";
-    $msg .= "2️⃣ <b>Quick Setup (Uses Environment Config)</b>\n";
-    $msg .= "   • Uses pre-configured data from environment variables\n";
-    $msg .= "   • Requires admin setup with real KYC documents\n";
-    $msg .= "   • Send /quickregister to proceed\n\n";
-    $msg .= "⚠️ <b>Important:</b> Real KYC documents are required for compliance.\n";
-    $msg .= "Never use fake or placeholder data.";
+function handleRegisterStart($chatId, $userId) {
+    // Check if already registered
+    $userData = getUserRegistrationData($userId);
+    if ($userData && $userData['is_registered']) {
+        $msg = "✅ <b>Already Registered!</b>\n\n";
+        $msg .= "You're all set! You can now create cards using ➕ <b>Create Card</b>";
+        sendMessage($chatId, $msg, true);
+        return;
+    }
     
-    sendMessage($chatId, $msg, true);
+    // Check if in progress
+    if ($userData && $userData['registration_state'] !== 'idle' && $userData['registration_state'] !== 'completed') {
+        $msg = "⏳ <b>Registration In Progress</b>\n\n";
+        $msg .= "You have an incomplete registration.\n\n";
+        $msg .= "Choose an option:\n";
+        $msg .= "• Send /continue to resume\n";
+        $msg .= "• Send /cancel to start over";
+        sendMessage($chatId, $msg, true);
+        return;
+    }
+    
+    // Start new registration
+    initializeUserRegistration($userId, $chatId);
+    
+    $msg = "📝 <b>Let's Register You!</b>\n\n";
+    $msg .= "I'll guide you through collecting your information for KYC verification.\n\n";
+    $msg .= "This is required to create virtual cards in StroWallet.\n\n";
+    $msg .= "📌 <b>What I'll ask for:</b>\n";
+    $msg .= "• Personal info (name, date of birth, phone)\n";
+    $msg .= "• Address details\n";
+    $msg .= "• ID verification (type, number, photos)\n\n";
+    $msg .= "⏱️ <b>Time:</b> About 5 minutes\n";
+    $msg .= "❌ <b>Cancel:</b> Send /cancel anytime\n\n";
+    $msg .= "Ready? Let's start!\n\n";
+    $msg .= "👤 <b>What's your first name?</b>";
+    
+    updateUserRegistrationState($userId, 'awaiting_first_name');
+    sendMessage($chatId, $msg, false);
 }
 
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
-    // Use configured email from secrets
-    $customerEmail = STROWALLET_EMAIL;
+    // Check if user is registered in database
+    $userData = getUserRegistrationData($userId);
+    $customerEmail = null;
+    
+    if ($userData && $userData['is_registered']) {
+        // Use email from user's registration
+        $customerEmail = $userData['customer_email'];
+    } else {
+        // Fallback to configured email from secrets
+        $customerEmail = STROWALLET_EMAIL;
+    }
     
     if (empty($customerEmail)) {
         sendMessage($chatId, "❌ <b>Configuration Error</b>\n\nSTROWALLET_EMAIL is not configured. Please contact administrator.", true);
@@ -594,6 +688,377 @@ function formatDate($date) {
     }
     $timestamp = strtotime($date);
     return $timestamp ? date('d/m/Y', $timestamp) : $date;
+}
+
+// ==================== REGISTRATION FLOW HANDLER ====================
+
+function handleRegistrationFlow($chatId, $userId, $text, $currentState) {
+    sendTypingAction($chatId);
+    
+    switch ($currentState) {
+        case 'awaiting_first_name':
+            if (strlen($text) < 2) {
+                sendMessage($chatId, "❌ Please enter a valid first name (at least 2 characters).", false);
+                return;
+            }
+            updateUserField($userId, 'first_name', $text);
+            updateUserRegistrationState($userId, 'awaiting_last_name');
+            sendMessage($chatId, "✅ Got it!\n\n👤 <b>What's your last name?</b>", false);
+            break;
+            
+        case 'awaiting_last_name':
+            if (strlen($text) < 2) {
+                sendMessage($chatId, "❌ Please enter a valid last name (at least 2 characters).", false);
+                return;
+            }
+            updateUserField($userId, 'last_name', $text);
+            updateUserRegistrationState($userId, 'awaiting_dob');
+            $msg = "✅ Great!\n\n📅 <b>What's your date of birth?</b>\n\n";
+            $msg .= "Format: <code>MM/DD/YYYY</code>\n";
+            $msg .= "Example: <code>01/15/1990</code>";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_dob':
+            if (!validateDateFormat($text)) {
+                sendMessage($chatId, "❌ Invalid date format. Please use MM/DD/YYYY\nExample: 01/15/1990", false);
+                return;
+            }
+            updateUserField($userId, 'date_of_birth', $text);
+            updateUserRegistrationState($userId, 'awaiting_phone');
+            $msg = "✅ Perfect!\n\n📱 <b>What's your phone number?</b>\n\n";
+            $msg .= "Format: International without '+'\n";
+            $msg .= "Example: <code>2348012345678</code>";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_phone':
+            $phone = preg_replace('/[^0-9]/', '', $text);
+            if (strlen($phone) < 10) {
+                sendMessage($chatId, "❌ Invalid phone number. Use international format without '+'\nExample: 2348012345678", false);
+                return;
+            }
+            updateUserField($userId, 'phone_number', $phone);
+            updateUserRegistrationState($userId, 'awaiting_email');
+            sendMessage($chatId, "✅ Good!\n\n📧 <b>What's your email address?</b>", false);
+            break;
+            
+        case 'awaiting_email':
+            if (!filter_var($text, FILTER_VALIDATE_EMAIL)) {
+                sendMessage($chatId, "❌ Invalid email address. Please enter a valid email.", false);
+                return;
+            }
+            updateUserField($userId, 'customer_email', $text);
+            updateUserRegistrationState($userId, 'awaiting_house_number');
+            sendMessage($chatId, "✅ Excellent!\n\n🏠 <b>What's your house/apartment number?</b>\nExample: 12B", false);
+            break;
+            
+        case 'awaiting_house_number':
+            updateUserField($userId, 'house_number', $text);
+            updateUserRegistrationState($userId, 'awaiting_address');
+            sendMessage($chatId, "✅ Thanks!\n\n📍 <b>What's your street address?</b>\nExample: 123 Main Street", false);
+            break;
+            
+        case 'awaiting_address':
+            if (strlen($text) < 5) {
+                sendMessage($chatId, "❌ Please enter a valid street address.", false);
+                return;
+            }
+            updateUserField($userId, 'address_line1', $text);
+            updateUserRegistrationState($userId, 'awaiting_city');
+            sendMessage($chatId, "✅ Got it!\n\n🏙️ <b>Which city do you live in?</b>", false);
+            break;
+            
+        case 'awaiting_city':
+            updateUserField($userId, 'city', $text);
+            updateUserRegistrationState($userId, 'awaiting_state');
+            sendMessage($chatId, "✅ Great!\n\n🗺️ <b>Which state/province?</b>", false);
+            break;
+            
+        case 'awaiting_state':
+            updateUserField($userId, 'state', $text);
+            updateUserRegistrationState($userId, 'awaiting_zip');
+            sendMessage($chatId, "✅ Good!\n\n📮 <b>What's your ZIP/postal code?</b>", false);
+            break;
+            
+        case 'awaiting_zip':
+            updateUserField($userId, 'zip_code', $text);
+            updateUserRegistrationState($userId, 'awaiting_country');
+            $msg = "✅ Perfect!\n\n🌍 <b>Country (2-letter code)?</b>\n\n";
+            $msg .= "Examples: NG, US, UK, CA";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_country':
+            $country = strtoupper(substr($text, 0, 2));
+            if (strlen($country) !== 2) {
+                sendMessage($chatId, "❌ Please enter a valid 2-letter country code (e.g., NG, US, UK)", false);
+                return;
+            }
+            updateUserField($userId, 'country', $country);
+            updateUserRegistrationState($userId, 'awaiting_id_type');
+            $msg = "✅ Excellent!\n\n🆔 <b>What type of ID do you have?</b>\n\n";
+            $msg .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_id_type':
+            $idType = strtoupper($text);
+            if (!in_array($idType, ['BVN', 'NIN', 'PASSPORT'])) {
+                sendMessage($chatId, "❌ Invalid ID type. Choose: BVN, NIN, or PASSPORT", false);
+                return;
+            }
+            updateUserField($userId, 'id_type', $idType);
+            updateUserRegistrationState($userId, 'awaiting_id_number');
+            sendMessage($chatId, "✅ Got it!\n\n🔢 <b>What's your ID number?</b>", false);
+            break;
+            
+        case 'awaiting_id_number':
+            updateUserField($userId, 'id_number', $text);
+            updateUserRegistrationState($userId, 'awaiting_id_image');
+            $msg = "✅ Good!\n\n📸 <b>Upload your ID document image</b>\n\n";
+            $msg .= "Please send the HTTPS URL of your ID image.\n";
+            $msg .= "Example: https://example.com/id.jpg";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_id_image':
+            if (!filter_var($text, FILTER_VALIDATE_URL) || !preg_match('/^https:\/\//i', $text)) {
+                sendMessage($chatId, "❌ Please send a valid HTTPS URL to your ID image.", false);
+                return;
+            }
+            updateUserField($userId, 'id_image_url', $text);
+            updateUserRegistrationState($userId, 'awaiting_user_photo');
+            $msg = "✅ Perfect!\n\n🤳 <b>Upload your selfie/photo</b>\n\n";
+            $msg .= "Please send the HTTPS URL of your photo.\n";
+            $msg .= "Example: https://example.com/selfie.jpg";
+            sendMessage($chatId, $msg, false);
+            break;
+            
+        case 'awaiting_user_photo':
+            if (!filter_var($text, FILTER_VALIDATE_URL) || !preg_match('/^https:\/\//i', $text)) {
+                sendMessage($chatId, "❌ Please send a valid HTTPS URL to your photo.", false);
+                return;
+            }
+            updateUserField($userId, 'user_photo_url', $text);
+            
+            // All data collected, now create customer in StroWallet
+            $result = createStroWalletCustomerFromDB($userId);
+            
+            if (isset($result['error'])) {
+                updateUserRegistrationState($userId, 'failed');
+                $msg = "❌ <b>Registration Failed</b>\n\n";
+                $msg .= "Error: " . $result['error'] . "\n\n";
+                $msg .= "Please check your information and try /register again.";
+                sendMessage($chatId, $msg, true);
+            } else {
+                // Mark as completed
+                markUserRegistrationComplete($userId, $result['customer_id'] ?? '');
+                
+                $msg = "✅ <b>Registration Successful!</b>\n\n";
+                $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
+                $msg .= "You can now create virtual cards using ➕ <b>Create Card</b>";
+                sendMessage($chatId, $msg, true);
+            }
+            break;
+    }
+}
+
+// ==================== DATABASE HELPER FUNCTIONS ====================
+
+function getUserRegistrationState($userId) {
+    if (!$userId) return null;
+    
+    $pdo = getDBConnection();
+    if (!$pdo) return null;
+    
+    try {
+        $stmt = $pdo->prepare("SELECT registration_state FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['registration_state'] : 'idle';
+    } catch (PDOException $e) {
+        error_log("Error getting user state: " . $e->getMessage());
+        return 'idle';
+    }
+}
+
+function getUserRegistrationData($userId) {
+    if (!$userId) return null;
+    
+    $pdo = getDBConnection();
+    if (!$pdo) return null;
+    
+    try {
+        $stmt = $pdo->prepare("SELECT * FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Error getting user data: " . $e->getMessage());
+        return null;
+    }
+}
+
+function initializeUserRegistration($userId, $chatId) {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO user_registrations (telegram_user_id, telegram_chat_id, registration_state)
+            VALUES (?, ?, 'idle')
+            ON CONFLICT (telegram_user_id) DO UPDATE SET 
+                telegram_chat_id = EXCLUDED.telegram_chat_id,
+                registration_state = 'idle',
+                updated_at = CURRENT_TIMESTAMP
+        ");
+        return $stmt->execute([$userId, $chatId]);
+    } catch (PDOException $e) {
+        error_log("Error initializing registration: " . $e->getMessage());
+        return false;
+    }
+}
+
+function updateUserRegistrationState($userId, $state) {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE user_registrations 
+            SET registration_state = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE telegram_user_id = ?
+        ");
+        return $stmt->execute([$state, $userId]);
+    } catch (PDOException $e) {
+        error_log("Error updating state: " . $e->getMessage());
+        return false;
+    }
+}
+
+function updateUserField($userId, $field, $value) {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    $allowedFields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'customer_email',
+                      'house_number', 'address_line1', 'city', 'state', 'zip_code', 'country',
+                      'id_type', 'id_number', 'id_image_url', 'user_photo_url'];
+    
+    if (!in_array($field, $allowedFields)) {
+        error_log("Invalid field: $field");
+        return false;
+    }
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE user_registrations 
+            SET $field = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE telegram_user_id = ?
+        ");
+        return $stmt->execute([$value, $userId]);
+    } catch (PDOException $e) {
+        error_log("Error updating field $field: " . $e->getMessage());
+        return false;
+    }
+}
+
+function markUserRegistrationComplete($userId, $customerId = '') {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE user_registrations 
+            SET registration_state = 'completed',
+                is_registered = TRUE,
+                strowallet_customer_id = ?,
+                completed_at = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE telegram_user_id = ?
+        ");
+        return $stmt->execute([$customerId, $userId]);
+    } catch (PDOException $e) {
+        error_log("Error marking registration complete: " . $e->getMessage());
+        return false;
+    }
+}
+
+function createStroWalletCustomerFromDB($userId) {
+    $userData = getUserRegistrationData($userId);
+    
+    if (!$userData) {
+        return ['error' => 'User data not found'];
+    }
+    
+    // Validate required fields
+    $required = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'customer_email',
+                 'house_number', 'address_line1', 'city', 'state', 'zip_code', 'country',
+                 'id_type', 'id_number', 'id_image_url', 'user_photo_url'];
+    
+    foreach ($required as $field) {
+        if (empty($userData[$field])) {
+            return ['error' => "Missing required field: $field"];
+        }
+    }
+    
+    // Prepare customer data for StroWallet API
+    $customerData = [
+        'public_key' => STROW_PUBLIC_KEY,
+        'houseNumber' => $userData['house_number'],
+        'firstName' => $userData['first_name'],
+        'lastName' => $userData['last_name'],
+        'idNumber' => $userData['id_number'],
+        'customerEmail' => $userData['customer_email'],
+        'phoneNumber' => $userData['phone_number'],
+        'dateOfBirth' => $userData['date_of_birth'],
+        'idImage' => $userData['id_image_url'],
+        'userPhoto' => $userData['user_photo_url'],
+        'line1' => $userData['address_line1'],
+        'state' => $userData['state'],
+        'zipCode' => $userData['zip_code'],
+        'city' => $userData['city'],
+        'country' => $userData['country'],
+        'idType' => $userData['id_type']
+    ];
+    
+    // Call StroWallet create-user API
+    return callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
+}
+
+// ==================== VALIDATION FUNCTIONS ====================
+
+function validateDateFormat($date) {
+    // Check MM/DD/YYYY format
+    if (!preg_match('/^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/', $date)) {
+        return false;
+    }
+    
+    // Validate actual date
+    $parts = explode('/', $date);
+    return checkdate((int)$parts[0], (int)$parts[1], (int)$parts[2]);
+}
+
+function promptForCurrentField($chatId, $state) {
+    $prompts = [
+        'awaiting_first_name' => "👤 <b>What's your first name?</b>",
+        'awaiting_last_name' => "👤 <b>What's your last name?</b>",
+        'awaiting_dob' => "📅 <b>What's your date of birth?</b>\n\nFormat: <code>MM/DD/YYYY</code>\nExample: <code>01/15/1990</code>",
+        'awaiting_phone' => "📱 <b>What's your phone number?</b>\n\nFormat: International without '+'\nExample: <code>2348012345678</code>",
+        'awaiting_email' => "📧 <b>What's your email address?</b>",
+        'awaiting_house_number' => "🏠 <b>What's your house/apartment number?</b>\nExample: 12B",
+        'awaiting_address' => "📍 <b>What's your street address?</b>\nExample: 123 Main Street",
+        'awaiting_city' => "🏙️ <b>Which city do you live in?</b>",
+        'awaiting_state' => "🗺️ <b>Which state/province?</b>",
+        'awaiting_zip' => "📮 <b>What's your ZIP/postal code?</b>",
+        'awaiting_country' => "🌍 <b>Country (2-letter code)?</b>\n\nExamples: NG, US, UK, CA",
+        'awaiting_id_type' => "🆔 <b>What type of ID do you have?</b>\n\nOptions:\n• BVN\n• NIN\n• PASSPORT",
+        'awaiting_id_number' => "🔢 <b>What's your ID number?</b>",
+        'awaiting_id_image' => "📸 <b>Upload your ID document image</b>\n\nPlease send the HTTPS URL of your ID image.\nExample: https://example.com/id.jpg",
+        'awaiting_user_photo' => "🤳 <b>Upload your selfie/photo</b>\n\nPlease send the HTTPS URL of your photo.\nExample: https://example.com/selfie.jpg"
+    ];
+    
+    $prompt = $prompts[$state] ?? "Please provide the requested information.";
+    sendMessage($chatId, "↩️ <b>Continuing registration...</b>\n\n" . $prompt, false);
 }
 
 // ==================== CUSTOMER MANAGEMENT ====================
