@@ -1,0 +1,100 @@
+Build a production-ready Telegram “Crypto Card Bot” that runs on PHP 8+ (no frameworks, no Composer) and deploys to cPanel as two webhook endpoints. The bot UI must use a persistent reply keyboard with these buttons:
++ Create Card · 💳 My Cards · 👤 User Info · 💰 Wallet · 💸 Invite Friends · 🧑‍💻 Support
+Also support slash commands: /start, /create_card, /cards, /userinfo, /wallet, /invite, /support, and /deposit_trc20.
+
+Core capabilities
+
+Create a virtual USD card via my StroWallet Admin API.
+
+List existing cards (brand, last4, status).
+
+Show User Info: name, phone, KYC status (green/red), user ID, card limit (owned/max), points, referrals, joined date, wallet balance.
+
+Wallet view: show balances (prefer USD). Provide action to get a USDT TRC20 deposit address (/deposit_trc20) and display it clearly.
+
+Invite Friends: return customizable referral text from env var.
+
+Support: open support URL from env var.
+
+Receive deposit confirmations from StroWallet Webhook and send a concise admin alert.
+
+APIs & separation
+
+Use two StroWallet API keys:
+
+Admin key for issuing endpoints (create/list cards).
+
+Personal key for wallet/profile (balances, deposit address, user info, limits).
+
+Base URL configurable (env): STROW_BASE.
+
+Tolerate both {"data": {...}} and flat JSON responses. Never expose secrets in logs or messages.
+
+Files & structure (deliverables)
+
+Public endpoints (to upload into public_html/):
+
+public/bot/webhook.php (Telegram router + features)
+
+public/bot/strowallet-webhook.php (receives events like deposit_confirmed)
+
+Private config template: secrets/.env.example
+
+README.md with exact cPanel + webhook setup and troubleshooting.
+
+scripts/test_endpoints.sh to verify base URL and keys with simple curl calls.
+
+No additional libraries; only native PHP and curl.
+
+Environment variables (read with parse_ini_file; stored OUTSIDE public_html)
+
+BOT_TOKEN (Telegram)
+
+STROW_BASE (e.g., https://strowallet.com
+ or your API base)
+
+STROW_ADMIN_KEY (issuing)
+
+STROW_PERSONAL_KEY (wallet/profile)
+
+STROW_PUBLIC_KEY (optional header if required)
+
+ADMIN_CHAT_ID (optional for alerts)
+
+SUPPORT_URL (support button)
+
+REFERRAL_TEXT (invite message)
+
+UX requirements
+
+Use Telegram reply keyboard matching the six buttons above, always shown after /start.
+
+Message formatting with parse_mode=HTML, include friendly emojis, mask long IDs, show request IDs when provided by API.
+
+For User Info, mirror the style: profile header, then fields (Name, Phone, KYC status emoji, User ID, Card Limit X/10, Points, Referrals, Joined On, Wallet Balance). If KYC not verified, append a short benefits notice.
+
+For errors: concise text like “Auth failed / Wrong endpoint / Network error,” plus “Request ID: …” when available.
+
+Webhooks & security
+
+Telegram webhook must return HTTP 200 and string OK.
+
+Optionally support Telegram secret_token verification header.
+
+StroWallet webhook accepts JSON; if HMAC/signature is available, include a verification stub and document how to enable it.
+
+Never echo env values; log minimal info only.
+
+Acceptance criteria
+
+Keyboard and all six buttons work; matching slash commands work.
+
+Card creation succeeds and appears in StroWallet dashboard; bot shows brand + last4 + status.
+
+/cards, /userinfo, /wallet, /deposit_trc20, /invite, /support all function as specified.
+
+Deposit event hits the StroWallet webhook and triggers an admin alert message.
+
+README.md includes step-by-step cPanel deployment (HTTPS), Telegram setWebhook, StroWallet webhook URL, and key rotation notes.
+
+.env.example included; no secrets in repo; test_endpoints.sh validates keys and base.
