@@ -19,6 +19,10 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 - ✅ Set up PHP development server for local testing
 - ✅ Created webhook info page (index.php) for easy webhook URL access
 - ✅ Fixed critical keyboard persistence bug (corrected from 'persistent' to 'is_persistent')
+- ✅ Configured Telegram webhook successfully - bot responding to messages
+- ✅ Added API secrets via Replit Secrets (BOT_TOKEN, STROW_PUBLIC_KEY, STROW_SECRET_KEY, STROWALLET_EMAIL)
+- ✅ Added debug logging for troubleshooting API errors
+- ⚠️ **Identified IP whitelist requirement**: StroWallet requires whitelisting Replit IP (35.184.21.47)
 
 ## Project Architecture
 
@@ -184,6 +188,7 @@ curl -X POST "https://yourdomain.com/bot/strowallet-webhook.php" \
 2. **Placeholder Keys:** Default .env contains test keys (must replace with real StroWallet keys)
 3. **LSP Warnings:** PHP LSP shows false positives for forward function references (safe to ignore)
 4. **No Database:** All data fetched from StroWallet API (stateless bot)
+5. **IP Whitelist Required:** StroWallet requires whitelisting server IP addresses for API access
 
 ## Troubleshooting Guide
 

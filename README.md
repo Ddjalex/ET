@@ -246,9 +246,14 @@ To rotate your API keys:
 
 **Solutions:**
 1. Verify API keys are correct in `.env`
-2. Run test script: `./scripts/test_endpoints.sh`
-3. Check if keys are expired/revoked in StroWallet dashboard
-4. Ensure no extra spaces in `.env` file
+2. **Check IP Whitelist:** StroWallet requires whitelisting your server's IP address
+   - Log into StroWallet dashboard
+   - Go to Settings → API Keys → Security/IP Whitelist
+   - Add your server's IP address (for Replit: check current IP with `curl ifconfig.me`)
+   - Save changes
+3. Run test script: `./scripts/test_endpoints.sh`
+4. Check if keys are expired/revoked in StroWallet dashboard
+5. Ensure no extra spaces in `.env` file
 
 ### Webhook Not Receiving Events
 
