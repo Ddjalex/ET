@@ -41,6 +41,9 @@ $update = json_decode($input, true);
 
 // Debug log
 error_log("Webhook received: " . $input);
+error_log("BOT_TOKEN exists: " . (BOT_TOKEN ? 'YES' : 'NO'));
+error_log("Chat ID: " . ($chatId ?? 'NONE'));
+error_log("Message text: " . ($text ?? 'NONE'));
 
 if (!$update) {
     http_response_code(400);
@@ -433,9 +436,14 @@ function sendMessage($chatId, $text, $showKeyboard = false) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
     
+    // Log all send attempts
+    error_log("Sending message to chat $chatId - HTTP $httpCode");
+    
     // Log if there's an error
     if ($httpCode !== 200) {
         error_log("Telegram API Error: HTTP $httpCode - Response: $response");
+    } else {
+        error_log("Message sent successfully: " . substr($text, 0, 50));
     }
 }
 
