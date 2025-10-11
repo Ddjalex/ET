@@ -1,4 +1,4 @@
-modules = ["php-8.2", "bash"]
+modules = ["php-8.2", "bash", "postgresql-16"]
 [agent]
 expertMode = true
 
