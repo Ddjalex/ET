@@ -24,6 +24,9 @@ define('TELEGRAM_SECRET_TOKEN', getenv('TELEGRAM_SECRET_TOKEN') ?: '');
 // Mock mode for testing (set to true to use demo data)
 define('USE_MOCK_DATA', getenv('USE_MOCK_DATA') === 'true' || getenv('USE_MOCK_DATA') === '1');
 
+// Sandbox mode for StroWallet API (bypasses IP whitelist)
+define('USE_SANDBOX_MODE', getenv('USE_SANDBOX_MODE') !== 'false');
+
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
     if ($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] !== TELEGRAM_SECRET_TOKEN) {
@@ -98,7 +101,8 @@ function handleCreateCard($chatId, $userId) {
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
         'amount' => '5',
-        'customerEmail' => STROWALLET_EMAIL
+        'customerEmail' => STROWALLET_EMAIL,
+        'mode' => 'sandbox'
     ];
     
     $result = callStroWalletAPI('/bitvcard/create-card/', 'POST', $requestData, true);
@@ -124,6 +128,8 @@ function handleCreateCard($chatId, $userId) {
         $msg .= "{$statusEmoji} <b>Status:</b> " . ucfirst($status) . "\n\n";
         if (USE_MOCK_DATA) {
             $msg .= "<i>🧪 Demo Mode - Using test data</i>\n\n";
+        } elseif (USE_SANDBOX_MODE) {
+            $msg .= "<i>🧪 Sandbox Mode - Test environment</i>\n\n";
         }
         $msg .= "ℹ️ Your new virtual card is ready to use!";
         
@@ -344,6 +350,10 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
         if (!empty($data)) {
+            // Add sandbox mode if enabled
+            if (USE_SANDBOX_MODE && !isset($data['mode'])) {
+                $data['mode'] = 'sandbox';
+            }
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
         }
     }
