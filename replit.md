@@ -39,6 +39,7 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
   - **Fixed KYC images not showing**: Relocated uploads to public_html/uploads/kyc_documents for web accessibility
   - **Fixed bot not responding**: Configured Telegram webhook to Replit server
   - **Improved UX**: /start command now checks registration status and prompts new users to register
+  - **Fixed registration flow**: Created PostgreSQL database and user_registrations table for tracking registration state
   - **Architect verified**: All issues resolved and ready for production testing
 
 ## Project Architecture
