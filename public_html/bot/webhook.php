@@ -339,6 +339,9 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
             $errorMsg = 'Wrong endpoint';
         }
         
+        // Log the full error for debugging
+        error_log("StroWallet API Error - HTTP $httpCode: " . $response);
+        
         $requestId = $result['request_id'] ?? $result['requestId'] ?? $result['trace_id'] ?? null;
         
         return [
