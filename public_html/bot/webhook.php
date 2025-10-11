@@ -4,6 +4,12 @@
  * PHP 8+ | No Frameworks | No Composer
  */
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', '/tmp/telegram_bot_errors.log');
+
 // Configuration - Use environment variables (Replit Secrets)
 define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
 define('STROW_BASE', 'https://strowallet.com/api');
@@ -379,8 +385,14 @@ function sendMessage($chatId, $text, $showKeyboard = false) {
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_exec($ch);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
     curl_close($ch);
+    
+    // Log if there's an error
+    if ($httpCode !== 200) {
+        error_log("Telegram API Error: HTTP $httpCode - Response: $response");
+    }
 }
 
 function sendTypingAction($chatId) {
