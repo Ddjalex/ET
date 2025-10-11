@@ -301,10 +301,10 @@ function handleSupport($chatId) {
 function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey = true) {
     $url = STROW_BASE . $endpoint;
     
+    // Try without Authorization header - only public_key in body
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json',
-        'Authorization: Bearer ' . STROW_SECRET_KEY
+        'Accept: application/json'
     ];
     
     $ch = curl_init();
