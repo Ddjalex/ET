@@ -25,7 +25,7 @@ define('TELEGRAM_SECRET_TOKEN', getenv('TELEGRAM_SECRET_TOKEN') ?: '');
 define('USE_MOCK_DATA', getenv('USE_MOCK_DATA') === 'true' || getenv('USE_MOCK_DATA') === '1');
 
 // Sandbox mode for StroWallet API (bypasses IP whitelist)
-define('USE_SANDBOX_MODE', getenv('USE_SANDBOX_MODE') !== 'false');
+define('USE_SANDBOX_MODE', false);
 
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
