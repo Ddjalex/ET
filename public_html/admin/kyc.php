@@ -1,53 +1,15 @@
 <?php
-$pageTitle = 'KYC Verification';
+$pageTitle = 'User Management';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
 
 $message = '';
 $messageType = '';
 
-// Handle KYC approval/rejection
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
-    if (!verifyCSRFToken($_POST['csrf_token'])) {
-        $message = 'Invalid security token.';
-        $messageType = 'error';
-    } else {
-        $action = $_POST['action'] ?? '';
-        $userId = intval($_POST['user_id'] ?? 0);
-        $adminId = $currentAdmin['id'];
-        
-        try {
-            if ($action === 'approve') {
-                dbQuery("UPDATE users SET kyc_status = 'approved', kyc_approved_at = NOW() WHERE id = ?", [$userId]);
-                dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, target_id, action_description) 
-                        VALUES (?, 'approve_kyc', 'users', ?, 'Approved KYC verification')", [$adminId, $userId]);
-                
-                $message = 'KYC approved successfully!';
-                $messageType = 'success';
-                
-            } elseif ($action === 'reject') {
-                $reason = trim($_POST['rejection_reason'] ?? '');
-                if (empty($reason)) {
-                    throw new Exception('Rejection reason is required');
-                }
-                
-                dbQuery("UPDATE users SET kyc_status = 'rejected', kyc_rejected_at = NOW(), kyc_rejection_reason = ? WHERE id = ?", 
-                       [$reason, $userId]);
-                dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, target_id, action_description, payload) 
-                        VALUES (?, 'reject_kyc', 'users', ?, 'Rejected KYC verification', ?)",
-                       [$adminId, $userId, json_encode(['reason' => $reason])]);
-                
-                $message = 'KYC rejected successfully.';
-                $messageType = 'success';
-            }
-        } catch (Exception $e) {
-            $message = 'Error: ' . $e->getMessage();
-            $messageType = 'error';
-        }
-    }
-}
+// Note: KYC verification is handled by StroWallet API
+// This page only displays user information and KYC status from StroWallet
 
-// Fetch users for KYC verification
+// Fetch users
 $filter = $_GET['filter'] ?? 'pending';
 $whereClause = match($filter) {
     'approved' => "kyc_status = 'approved'",
@@ -75,8 +37,12 @@ $statusCounts = dbFetchOne("
 ?>
 
 <div class="page-header">
-    <h2>✅ KYC Verification</h2>
-    <p class="subtitle">Review and verify user identity documents</p>
+    <h2>👥 User Management</h2>
+    <p class="subtitle">View users and their KYC status (verified by StroWallet API)</p>
+</div>
+
+<div class="alert" style="background: #dbeafe; color: #1e40af; border: 1px solid #3b82f6; margin-bottom: 20px;">
+    ℹ️ <strong>Note:</strong> KYC verification is handled by StroWallet API. Status updates are received via StroWallet webhooks.
 </div>
 
 <?php if ($message): ?>
@@ -238,33 +204,11 @@ function showKYCDetails(userId) {
                 </div>
             ` : ''}
             
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd; display: flex; gap: 10px; justify-content: space-between;">
-                <button onclick="closeKYCModal()" class="btn">Close</button>
-                ${canApprove ? `
-                    <div style="display: flex; gap: 10px;">
-                        <button onclick="showKYCRejectForm(${userId})" class="btn btn-danger">Reject</button>
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to approve this KYC?')">
-                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                            <input type="hidden" name="action" value="approve">
-                            <input type="hidden" name="user_id" value="${userId}">
-                            <button type="submit" class="btn btn-success">Approve KYC</button>
-                        </form>
-                    </div>
-                ` : ''}
-            </div>
-            
-            <div id="kycRejectForm${userId}" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-                <form method="POST">
-                    <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    <input type="hidden" name="action" value="reject">
-                    <input type="hidden" name="user_id" value="${userId}">
-                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">Rejection Reason:</label>
-                    <textarea name="rejection_reason" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; min-height: 80px;"></textarea>
-                    <div style="margin-top: 10px; display: flex; gap: 10px;">
-                        <button type="button" onclick="hideKYCRejectForm(${userId})" class="btn">Cancel</button>
-                        <button type="submit" class="btn btn-danger">Confirm Rejection</button>
-                    </div>
-                </form>
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                    <strong>KYC Status:</strong> ${user.kyc_status === 'approved' ? '<span style="color: #10b981;">✓ Verified by StroWallet</span>' : user.kyc_status === 'rejected' ? '<span style="color: #ef4444;">✗ Rejected by StroWallet</span>' : '<span style="color: #f59e0b;">⏳ Pending verification</span>'}
+                </p>
+                <button onclick="closeKYCModal()" class="btn btn-primary">Close</button>
             </div>
         </div>
     `;
@@ -275,14 +219,6 @@ function showKYCDetails(userId) {
 
 function closeKYCModal() {
     document.getElementById('kycModal').style.display = 'none';
-}
-
-function showKYCRejectForm(userId) {
-    document.getElementById('kycRejectForm' + userId).style.display = 'block';
-}
-
-function hideKYCRejectForm(userId) {
-    document.getElementById('kycRejectForm' + userId).style.display = 'none';
 }
 
 document.getElementById('kycModal').addEventListener('click', function(e) {

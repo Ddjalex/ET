@@ -266,8 +266,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
             <nav>
                 <a href="/admin/dashboard.php" class="<?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">📊 Dashboard</a>
                 <a href="/admin/deposits.php" class="<?php echo $currentPage === 'deposits' ? 'active' : ''; ?>">💰 Deposits</a>
-                <a href="/admin/kyc.php" class="<?php echo $currentPage === 'kyc' ? 'active' : ''; ?>">✅ KYC Verification</a>
-                <a href="/admin/users.php" class="<?php echo $currentPage === 'users' ? 'active' : ''; ?>">👥 Users</a>
+                <a href="/admin/kyc.php" class="<?php echo $currentPage === 'kyc' ? 'active' : ''; ?>">👥 Users</a>
                 <a href="/admin/cards.php" class="<?php echo $currentPage === 'cards' ? 'active' : ''; ?>">💳 Cards</a>
                 <a href="/admin/transactions.php" class="<?php echo $currentPage === 'transactions' ? 'active' : ''; ?>">📈 Transactions</a>
                 <a href="/admin/settings.php" class="<?php echo $currentPage === 'settings' ? 'active' : ''; ?>">⚙️ Settings</a>
