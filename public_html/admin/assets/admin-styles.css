@@ -172,48 +172,53 @@ main > * {
     z-index: 1;
 }
 
-/* Typography - High Contrast */
+/* Typography - Ultra High Contrast */
 h1, h2, h3, h4, h5, h6 {
-    font-weight: 700;
-    color: var(--text-primary);
+    font-weight: 800;
+    color: #ffffff;
     margin-bottom: var(--spacing-sm);
     font-family: var(--font-display);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(102, 126, 234, 0.5);
 }
 
 h2 {
-    font-size: 1.875rem;
+    font-size: 2.25rem;
+    letter-spacing: -0.5px;
 }
 
 h3 {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
 }
 
 h4 {
-    font-size: 1.25rem;
+    font-size: 1.375rem;
 }
 
-/* Page Header - Glass Effect with Clear Text */
+/* Page Header - Strong Glass Effect with Ultra Visible Text */
 .page-header {
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: var(--radius-lg);
     padding: var(--spacing-lg);
     margin-bottom: var(--spacing-lg);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg), 0 0 40px rgba(102, 126, 234, 0.3);
 }
 
 .page-header h2 {
     margin-bottom: 0.5rem;
-    color: var(--text-primary);
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    color: #ffffff;
+    font-weight: 900;
+    text-shadow: 0 3px 10px rgba(0, 0, 0, 0.7), 0 0 30px rgba(102, 126, 234, 0.6);
+    font-size: 2.5rem;
 }
 
 .subtitle {
-    color: var(--text-secondary);
-    font-size: 1rem;
-    font-weight: 500;
+    color: #e2e8f0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
 /* Cards - Glass Morphism with Better Visibility */
@@ -237,8 +242,11 @@ h4 {
 .card h3 {
     margin-bottom: var(--spacing-md);
     padding-bottom: var(--spacing-sm);
-    border-bottom: 2px solid rgba(226, 232, 240, 0.2);
-    color: var(--text-primary);
+    border-bottom: 2px solid rgba(226, 232, 240, 0.3);
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.75rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(102, 126, 234, 0.5);
 }
 
 /* Stats Grid */
@@ -293,11 +301,12 @@ h4 {
 }
 
 .stat-card .stat-label {
-    color: var(--text-secondary);
-    font-size: 0.938rem;
-    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 1rem;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 /* Forms - Clear Inputs */
@@ -501,38 +510,46 @@ tr:hover {
     color: white;
 }
 
-/* Tabs - Glass Effect */
+/* Tabs - Ultra Visible Glass Effect */
 .tabs {
     display: flex;
     gap: var(--spacing-xs);
     margin-bottom: var(--spacing-lg);
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px);
-    padding: var(--spacing-xs);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--glass-border);
+    background: rgba(30, 41, 59, 0.7);
+    backdrop-filter: blur(16px);
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-lg);
+    border: 2px solid rgba(226, 232, 240, 0.25);
+    box-shadow: var(--shadow-md);
 }
 
 .tab {
-    padding: 0.75rem 1.5rem;
-    background: transparent;
-    border: none;
+    padding: 0.875rem 1.75rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     cursor: pointer;
-    font-weight: 600;
-    color: var(--text-muted);
-    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 1rem;
+    color: #e2e8f0;
+    border-radius: var(--radius-md);
     transition: all 0.3s;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .tab.active {
     background: var(--primary-gradient);
-    color: white;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5), 0 0 30px rgba(102, 126, 234, 0.4);
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
 }
 
 .tab:hover:not(.active) {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
 }
 
 /* Empty State */
