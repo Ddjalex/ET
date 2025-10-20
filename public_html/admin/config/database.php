@@ -28,7 +28,7 @@ function getDBConnection() {
     $pass = $parts['pass'] ?? '';
     $dbname = ltrim($parts['path'] ?? '', '/');
     
-    $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=disable";
+    $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require";
     
     try {
         $_DB_CONNECTION = new PDO($dsn, $user, $pass, [
