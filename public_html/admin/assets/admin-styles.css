@@ -87,23 +87,32 @@ body::before {
     animation: backgroundPulse 20s ease-in-out infinite;
 }
 
-/* Virtual Card Background Image */
-body::after {
+/* Virtual Card Background Image for Dashboard */
+main::before {
     content: '';
     position: fixed;
     top: 50%;
-    right: -10%;
-    width: 800px;
-    height: 500px;
-    background-image: url('virtual-card-bg.png');
+    right: 8%;
+    width: 650px;
+    height: 400px;
+    background-image: url('/admin/assets/virtual-card-bg.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.08;
-    transform: translateY(-50%) rotate(15deg);
-    z-index: -1;
+    opacity: 0.06;
+    transform: translateY(-50%) rotate(12deg);
+    z-index: 0;
     animation: cardFloat 25s ease-in-out infinite;
     pointer-events: none;
+}
+
+main {
+    position: relative;
+}
+
+main > * {
+    position: relative;
+    z-index: 1;
 }
 
 @keyframes cardFloat {

@@ -96,4 +96,4 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     </aside>
 
     <!-- Main Content Area -->
-    <main style="margin-left: 240px; margin-top: 70px; padding: 2rem; min-height: calc(100vh - 70px); background: #ffffff;">
+    <main style="margin-left: 240px; margin-top: 70px; padding: 2rem; min-height: calc(100vh - 70px); background: #ffffff; position: relative;">
