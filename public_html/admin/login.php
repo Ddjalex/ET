@@ -152,9 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             <div class="form-group">
                 <label for="password">Password</label>
-                <div style="position: relative;">
-                    <input type="password" id="password" name="password" required style="padding-right: 45px;">
-                    <button type="button" onclick="togglePassword()" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 18px; padding: 5px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="password" id="password" name="password" required style="flex: 1;">
+                    <button type="button" onclick="togglePassword()" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(102,126,234,0.3); border-radius: 5px; cursor: pointer; font-size: 20px; padding: 8px 12px; transition: all 0.3s;">
                         <span id="toggleIcon">👁️</span>
                     </button>
                 </div>
