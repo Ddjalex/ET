@@ -91,18 +91,37 @@ body::before {
 main::before {
     content: '';
     position: fixed;
-    top: 50%;
-    right: 8%;
-    width: 650px;
-    height: 400px;
+    bottom: -100px;
+    right: -100px;
+    width: 900px;
+    height: 560px;
     background-image: url('/admin/assets/virtual-card-bg.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.06;
-    transform: translateY(-50%) rotate(12deg);
+    opacity: 0.15;
+    transform: rotate(-15deg);
     z-index: 0;
-    animation: cardFloat 25s ease-in-out infinite;
+    animation: cardFloat 30s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* Second virtual card for balance */
+main::after {
+    content: '';
+    position: fixed;
+    top: 100px;
+    left: 200px;
+    width: 500px;
+    height: 310px;
+    background-image: url('/admin/assets/virtual-card-bg.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.08;
+    transform: rotate(8deg);
+    z-index: 0;
+    animation: cardFloatSlow 35s ease-in-out infinite;
     pointer-events: none;
 }
 
@@ -117,11 +136,22 @@ main > * {
 
 @keyframes cardFloat {
     0%, 100% { 
-        transform: translateY(-50%) rotate(15deg) translateX(0);
+        transform: rotate(-15deg) translateY(0);
+        opacity: 0.15;
+    }
+    50% { 
+        transform: rotate(-12deg) translateY(-20px);
+        opacity: 0.22;
+    }
+}
+
+@keyframes cardFloatSlow {
+    0%, 100% { 
+        transform: rotate(8deg) translateX(0);
         opacity: 0.08;
     }
     50% { 
-        transform: translateY(-55%) rotate(18deg) translateX(-50px);
+        transform: rotate(10deg) translateX(30px);
         opacity: 0.12;
     }
 }
@@ -137,12 +167,35 @@ h1, h2, h3, h4, h5, h6 {
     font-weight: 700;
     line-height: 1.2;
     margin-bottom: var(--spacing-sm);
+    color: #1f2937;
 }
 
 h1 { font-size: 2.5rem; }
 h2 { font-size: 2rem; }
 h3 { font-size: 1.5rem; }
 h4 { font-size: 1.25rem; }
+
+/* Page Header Styling */
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.page-header h2 {
+    color: white;
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+}
+
+.page-header .subtitle,
+.page-header p {
+    color: rgba(255, 255, 255, 0.95);
+    margin: 0;
+    font-size: 0.95rem;
+}
 
 /* Layout Container */
 .admin-container {
