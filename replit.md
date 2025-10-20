@@ -33,16 +33,15 @@ The project is organized into `database/` for migrations, `public_html/` contain
 - **Admin Panel:** PHP with session-based authentication, featuring a professional crypto-themed UI with a comprehensive CSS design system, modern typography (Inter, Poppins), glass-morphism effects, and responsive components.
 
 ### UI/UX Decisions
-The admin panel features an **ultra-premium, modern design** with extensive enhancements:
-- **Advanced Animation System**: Slide-up, fade-in, pulse, shimmer, and particle effects
-- **Premium Visual Effects**: Multi-layer gradients, glass-morphism, glowing shadows, floating backgrounds
-- **Enhanced Stat Cards**: 70px gradient icons, 2.5rem bold values, 10px hover lift with scale, radial glow effects
-- **Modern Typography**: Inter (300-900), Poppins (600-900), JetBrains Mono for code
-- **Premium Interactions**: Ripple effects, hover lift (4px), animated borders, smooth cubic-bezier transitions
-- **Professional Color System**: Enhanced gradients (blue/purple primary), vibrant accents (gold, green, red, cyan, purple, pink)
-- **Glass Design**: Backdrop blur effects, transparent borders, layered shadows
-- **Responsive Components**: Mobile-optimized layouts, adaptive grids, touch-friendly interactions
-- Last updated: October 2025 - Premium CSS Enhancement
+The admin panel features a **clean, professional design** with focus on usability:
+- **Simple Design System**: Clean white cards on light gray background
+- **Solid Colors**: No gradients or glass effects - solid color scheme
+- **Clear Typography**: Inter font family for consistency
+- **Subtle Shadows**: Minimal shadows for depth without distraction
+- **Professional Color System**: Indigo primary (#4f46e5), green success, red error, yellow warning, blue info
+- **Responsive Components**: Mobile-optimized layouts, adaptive grids
+- **Accessibility First**: High contrast, clear borders, readable text
+- Last updated: October 2025 - Simplified to clean design without glass-morphism or gradients
 
 ### System Design Choices
 The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
