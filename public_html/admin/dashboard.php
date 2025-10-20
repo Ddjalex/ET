@@ -54,10 +54,37 @@ $recentActivities = dbFetchAll("
                 </p>
             </div>
         </div>
-        <div style="color: rgba(255,255,255,0.95); font-size: 0.9rem; font-weight: 500;">
+        <div id="live-clock" style="color: rgba(255,255,255,0.95); font-size: 0.9rem; font-weight: 500;">
             <?php echo date('l, F j, Y'); ?> • <?php echo date('g:i A'); ?>
         </div>
     </div>
+
+    <script>
+    function updateClock() {
+        const now = new Date();
+        
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        
+        const dayName = days[now.getDay()];
+        const monthName = months[now.getMonth()];
+        const date = now.getDate();
+        const year = now.getFullYear();
+        
+        let hours = now.getHours();
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12;
+        hours = hours ? hours : 12;
+        
+        const timeString = `${dayName}, ${monthName} ${date}, ${year} • ${hours}:${minutes} ${ampm}`;
+        
+        document.getElementById('live-clock').textContent = timeString;
+    }
+    
+    updateClock();
+    setInterval(updateClock, 1000);
+    </script>
 
     <!-- Statistics Grid -->
     <div class="stats-grid">
