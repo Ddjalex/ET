@@ -2,7 +2,7 @@
 
 ## 🎯 Your Role as Admin
 
-You are responsible for **deposit approval only**. StroWallet API handles all card-related operations automatically through the Telegram bot.
+You are responsible for **deposit approval only**. StroWallet API handles KYC verification and all card-related operations automatically.
 
 ## 📋 Complete Workflow
 
@@ -13,7 +13,7 @@ You are responsible for **deposit approval only**. StroWallet API handles all ca
 ### Step 2: KYC Verification (StroWallet)
 - **StroWallet automatically verifies KYC** 
 - StroWallet responds to customer about verification status
-- Admin panel shows successful verification notification
+- **Admin can VIEW KYC status** (but doesn't verify it)
 
 ### Step 3: Customer Deposit Request
 - Customer wants to add money to their wallet
@@ -28,7 +28,7 @@ You are responsible for **deposit approval only**. StroWallet API handles all ca
 - Customer provides transaction ID
 - Deposit request appears in admin panel
 
-### Step 5: Admin Approval ⭐ (YOUR WORK)
+### Step 5: Admin Approval ⭐ (YOUR ONLY WORK)
 - **You review the deposit request**
 - **You verify the payment screenshot**
 - **You check the transaction ID**
@@ -46,7 +46,7 @@ You are responsible for **deposit approval only**. StroWallet API handles all ca
 - StroWallet charges card fees
 - **This is NOT your responsibility**
 
-## ⚙️ Admin Panel Settings (Updated)
+## ⚙️ Admin Panel Settings
 
 ### ✅ What You Manage:
 
@@ -60,52 +60,56 @@ You are responsible for **deposit approval only**. StroWallet API handles all ca
    - Flat fee charged on deposits
    - Applied when customer deposits money
 
-### ❌ What You DON'T Manage (Removed from Settings):
+### ❌ What You DON'T Manage:
 
-1. ~~💳 Card Creation Fee~~ - Handled by StroWallet
-2. ~~💰 Card Top-up Fee~~ - Handled by StroWallet
-3. ~~⚡ Card Limits~~ - Handled by StroWallet
+1. ~~KYC Verification~~ - Handled by StroWallet (you only view status)
+2. ~~💳 Card Creation Fee~~ - Handled by StroWallet
+3. ~~💰 Card Top-up Fee~~ - Handled by StroWallet
+4. ~~⚡ Card Limits~~ - Handled by StroWallet
 
 ## 🎨 Admin Panel Pages
 
 ### 1. Dashboard
 - View system statistics
-- See pending KYC verifications
-- See pending deposit approvals
+- See pending deposits (awaiting your approval)
 - Quick actions for common tasks
 
-### 2. Deposits
+### 2. Deposits ⭐ (YOUR MAIN WORK)
 - Review deposit requests
 - View payment screenshots
 - Verify transaction IDs
 - Approve or reject deposits
 - Add money to customer wallets
 
-### 3. KYC Verification
-- Review customer identity documents
-- Verify ID images and photos
-- Approve or reject KYC submissions
+### 3. User Management / KYC Status
+- **View** customer KYC status (verified by StroWallet)
+- See customer information
+- Check verification dates
+- **Note:** You don't verify KYC - StroWallet does this automatically
 
 ### 4. Settings
 - Manage exchange rates
 - Configure deposit fees
-- View workflow information
 
 ## 💡 Key Points
 
-✅ **Your Focus:** Deposit approval and KYC verification
-✅ **StroWallet Focus:** Card creation, limits, fees
-✅ **Separation:** Clear boundary between admin work and API work
-✅ **Simplified:** No unnecessary settings to manage
+✅ **Your Only Focus:** Approve customer deposits
+✅ **StroWallet Handles:** KYC verification, card creation, limits, fees
+✅ **You View:** KYC status (but don't verify it yourself)
+✅ **Simplified:** Only manage what's necessary for deposits
 
-## 🚀 Benefits of This Workflow
+## 🚀 Benefits of This Clear Workflow
 
-1. **Clear Responsibilities** - You know exactly what you manage
-2. **Less Complexity** - Fewer settings to configure
-3. **Faster Operations** - StroWallet handles cards automatically
-4. **Better UX** - Customers get cards instantly via bot
-5. **Focused Work** - You concentrate on deposit approval
+1. **Single Responsibility** - You only handle deposit approvals
+2. **Less Work** - StroWallet automates KYC and cards
+3. **Faster Operations** - Customers get cards instantly via bot
+4. **Clear Boundaries** - You know exactly what you control
 
 ---
 
-**Remember:** Once you approve a deposit and add money to the customer's wallet, your work is complete. The customer can then use the Telegram bot to create and manage their virtual cards through StroWallet API.
+**Summary:** 
+- **StroWallet verifies KYC** (you only view the status)
+- **You approve deposits** (your main job)
+- **StroWallet handles cards** (creation, fees, limits)
+
+Once you approve a deposit and add money to the customer's wallet, your work is complete!

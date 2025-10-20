@@ -109,37 +109,6 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
     <p class="subtitle">Manage deposit exchange rates and fees</p>
 </div>
 
-<div class="workflow-info">
-    <h3>📋 Admin Panel Workflow</h3>
-    <p style="opacity: 0.95; margin-bottom: 20px;">Your role is to handle customer deposits. Card creation and management is handled by StroWallet API automatically.</p>
-    
-    <div class="workflow-steps">
-        <div class="workflow-step">
-            <div class="number">1️⃣</div>
-            <div class="text">Customer registers in bot</div>
-        </div>
-        <div class="workflow-step">
-            <div class="number">2️⃣</div>
-            <div class="text">StroWallet verifies KYC</div>
-        </div>
-        <div class="workflow-step">
-            <div class="number">3️⃣</div>
-            <div class="text">Customer deposits to CBE/Telebirr</div>
-        </div>
-        <div class="workflow-step">
-            <div class="number">4️⃣</div>
-            <div class="text">Admin approves deposit</div>
-        </div>
-        <div class="workflow-step">
-            <div class="number">5️⃣</div>
-            <div class="text">Money added to wallet</div>
-        </div>
-        <div class="workflow-step">
-            <div class="number">6️⃣</div>
-            <div class="text">StroWallet handles cards</div>
-        </div>
-    </div>
-</div>
 
 <?php if ($message): ?>
     <div class="alert <?php echo $messageType; ?>">
@@ -221,7 +190,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             <strong>Your Responsibilities:</strong>
         </p>
         <ul style="margin-left: 20px; margin-bottom: 12px;">
-            <li>Verify and approve customer KYC documents</li>
+            <li>View customer KYC status (verified by StroWallet)</li>
             <li>Review and approve customer deposit requests</li>
             <li>Manage exchange rates for deposit calculations</li>
             <li>Set deposit fees (if applicable)</li>
