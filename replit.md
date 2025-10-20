@@ -48,7 +48,12 @@ The admin panel features **premium glass-morphism design with enhanced visibilit
 The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
 
 ### Recent Changes (October 20, 2025)
+- **Environment Setup**: Created `.env` file with admin credentials (admin/admin123) and API keys stored in Replit Secrets
 - **Database Setup**: PostgreSQL database provisioned and all migrations applied successfully (9 tables created)
+- **KYC Real-Time Updates**: Enhanced admin panel with auto-refresh (30s) for real-time KYC status monitoring
+- **Webhook Integration**: Added StroWallet webhook handlers for KYC events (kyc_updated, kyc_approved, kyc_rejected)
+- **Admin Notifications**: Telegram alerts sent to admin when KYC status changes from StroWallet
+- **Auto-Sync Feature**: KYC page automatically syncs with StroWallet API and updates database in real-time
 - **Foreign Key Fixes**: Corrected `admin_actions` and `settings` tables to reference `admin_users` instead of `users` table
 - **Admin Login**: Fixed default admin password to match login page (username: `admin`, password: `admin123`)
 - **UI/Alert Fixes**: Corrected alert message CSS classes from `error`/`success` to `alert-error`/`alert-success` for proper styling
@@ -57,7 +62,16 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 ### Features Implemented
 - **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/invite`, `/support`.
 - **Reply Keyboard Buttons:** Create Card, My Cards, User Info, Wallet, Invite Friends, Support.
-- **Webhook Features:** Telegram webhook with secret token verification, StroWallet webhook with HMAC verification stub, admin alerts for deposits.
+- **Webhook Features:** 
+  - Telegram webhook with secret token verification
+  - StroWallet webhook with HMAC verification and real-time KYC sync
+  - Admin alerts for deposits and KYC status changes via Telegram
+  - Automatic database updates when StroWallet sends KYC events
+- **Admin Panel KYC Management:**
+  - Real-time auto-refresh (30 seconds) for KYC status monitoring
+  - Manual sync button to fetch latest status from StroWallet API
+  - Countdown timer showing next auto-refresh
+  - Filter users by KYC status (pending, approved, rejected)
 - **Error Handling:** Comprehensive handling for authentication failures, wrong endpoints, network errors, with request ID display and user-friendly messages.
 
 ## External Dependencies
