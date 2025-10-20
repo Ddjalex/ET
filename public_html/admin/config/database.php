@@ -31,7 +31,15 @@ function getDBConnection() {
     $pass = $parts['pass'] ?? '';
     $dbname = ltrim($parts['path'] ?? '', '/');
     
-    $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode=require";
+    // Parse query string for sslmode
+    $queryParams = [];
+    $sslmode = 'disable';
+    if (isset($parts['query'])) {
+        parse_str($parts['query'], $queryParams);
+        $sslmode = $queryParams['sslmode'] ?? 'disable';
+    }
+    
+    $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
     
     try {
         $_DB_CONNECTION = new PDO($dsn, $user, $pass, [
