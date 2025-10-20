@@ -211,7 +211,7 @@ ON CONFLICT (key) DO NOTHING;
 -- Create default admin user (password: admin123 - CHANGE THIS IMMEDIATELY)
 -- Password hash for 'admin123' using PHP password_hash
 INSERT INTO admin_users (username, email, password_hash, full_name, role) VALUES 
-('admin', 'admin@cardbot.local', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System Administrator', 'super_admin')
+('admin', 'admin@cardbot.local', '$2y$10$44B3Z2K3NJ9jU7pm7jp0ee3QX89F3yPD1r2wwPASeGAQPfmNFXRwG', 'System Administrator', 'super_admin')
 ON CONFLICT (username) DO NOTHING;
 
 -- Trigger to update updated_at timestamp
