@@ -33,6 +33,9 @@ if (!$payload) {
     die('Invalid JSON');
 }
 
+// Connect to database for KYC sync
+require_once __DIR__ . '/../admin/config/database.php';
+
 // Process event
 $eventType = $payload['event'] ?? $payload['type'] ?? 'unknown';
 $eventData = $payload['data'] ?? $payload;
@@ -42,6 +45,12 @@ if ($eventType === 'deposit_confirmed' || $eventType === 'deposit.confirmed') {
     handleDepositConfirmed($eventData);
 } elseif ($eventType === 'card_created' || $eventType === 'card.created') {
     handleCardCreated($eventData);
+} elseif ($eventType === 'kyc_updated' || $eventType === 'kyc.updated' || $eventType === 'customer.kyc_updated') {
+    handleKYCUpdated($eventData);
+} elseif ($eventType === 'kyc_approved' || $eventType === 'kyc.approved') {
+    handleKYCApproved($eventData);
+} elseif ($eventType === 'kyc_rejected' || $eventType === 'kyc.rejected') {
+    handleKYCRejected($eventData);
 } else {
     // Log unknown events (optional)
     logEvent($eventType, $eventData);
@@ -94,6 +103,83 @@ function handleCardCreated($data) {
         
         sendTelegramMessage(ADMIN_CHAT_ID, $msg);
     }
+}
+
+function handleKYCUpdated($data) {
+    $email = $data['email'] ?? $data['customer_email'] ?? null;
+    $customerId = $data['customer_id'] ?? $data['customerId'] ?? null;
+    $kycStatus = strtolower($data['kyc_status'] ?? $data['kycStatus'] ?? 'pending');
+    
+    if (!$email && !$customerId) {
+        return;
+    }
+    
+    // Map StroWallet status to database status
+    $dbStatus = match($kycStatus) {
+        'verified', 'approved' => 'approved',
+        'rejected', 'failed' => 'rejected',
+        default => 'pending'
+    };
+    
+    // Update user KYC status in database
+    try {
+        $updateFields = ['kyc_status' => $dbStatus];
+        
+        if ($customerId) {
+            $updateFields['strow_customer_id'] = $customerId;
+        }
+        
+        if ($dbStatus === 'approved') {
+            $updateFields['kyc_approved_at'] = date('Y-m-d H:i:s');
+        } elseif ($dbStatus === 'rejected') {
+            $updateFields['kyc_rejected_at'] = date('Y-m-d H:i:s');
+            if (isset($data['rejection_reason'])) {
+                $updateFields['kyc_rejection_reason'] = $data['rejection_reason'];
+            }
+        }
+        
+        $setParts = [];
+        $params = [];
+        foreach ($updateFields as $key => $value) {
+            $setParts[] = "$key = ?";
+            $params[] = $value;
+        }
+        
+        $whereClause = $email ? "email = ?" : "strow_customer_id = ?";
+        $params[] = $email ?: $customerId;
+        
+        $query = "UPDATE users SET " . implode(', ', $setParts) . " WHERE $whereClause";
+        dbQuery($query, $params);
+        
+        // Notify admin
+        if (!empty(ADMIN_CHAT_ID)) {
+            $statusEmoji = match($dbStatus) {
+                'approved' => '✅',
+                'rejected' => '❌',
+                default => '⏳'
+            };
+            
+            $msg = "{$statusEmoji} <b>KYC Status Updated</b>\n\n";
+            $msg .= "📧 <b>Email:</b> " . ($email ?: 'N/A') . "\n";
+            $msg .= "🆔 <b>Customer ID:</b> " . ($customerId ? maskId($customerId) : 'N/A') . "\n";
+            $msg .= "📋 <b>Status:</b> " . ucfirst($dbStatus) . "\n";
+            $msg .= "🕐 <b>Updated:</b> " . date('d/m/Y H:i:s');
+            
+            sendTelegramMessage(ADMIN_CHAT_ID, $msg);
+        }
+    } catch (Exception $e) {
+        logEvent('kyc_update_error', ['error' => $e->getMessage(), 'data' => $data]);
+    }
+}
+
+function handleKYCApproved($data) {
+    $data['kyc_status'] = 'approved';
+    handleKYCUpdated($data);
+}
+
+function handleKYCRejected($data) {
+    $data['kyc_status'] = 'rejected';
+    handleKYCUpdated($data);
 }
 
 // ==================== HELPER FUNCTIONS ====================
