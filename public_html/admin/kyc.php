@@ -2,9 +2,71 @@
 $pageTitle = 'User Management';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/../../secrets/load_env.php';
 
 $message = '';
 $messageType = '';
+
+// StroWallet API Configuration
+define('STROW_BASE', 'https://strowallet.com/api');
+define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
+define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
+
+// Function to call StroWallet API
+function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
+    $url = STROW_BASE . $endpoint;
+    
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    
+    if ($method === 'POST') {
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    }
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    return [
+        'http_code' => $httpCode,
+        'data' => json_decode($response, true),
+        'raw' => $response
+    ];
+}
+
+// Sync KYC status from StroWallet if requested
+if (isset($_GET['sync_user'])) {
+    $userId = (int)$_GET['sync_user'];
+    $user = dbFetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
+    
+    if ($user && !empty($user['email'])) {
+        $result = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($user['email']), 'GET');
+        
+        if ($result['http_code'] === 200 && isset($result['data']['data'])) {
+            $strowData = $result['data']['data'];
+            $kycStatus = strtolower($strowData['kycStatus'] ?? 'pending');
+            
+            // Map StroWallet status to our database
+            $dbStatus = match($kycStatus) {
+                'verified', 'approved' => 'approved',
+                'rejected', 'failed' => 'rejected',
+                default => 'pending'
+            };
+            
+            dbQuery("UPDATE users SET kyc_status = ?, strow_customer_id = ? WHERE id = ?", 
+                [$dbStatus, $strowData['customerId'] ?? null, $userId]);
+            
+            $message = "✅ KYC status synced from StroWallet: " . ucfirst($kycStatus);
+            $messageType = 'alert-success';
+        } else {
+            $message = "⚠️ Could not fetch KYC status from StroWallet API";
+            $messageType = 'alert-warning';
+        }
+    }
+}
 
 // Note: KYC verification is handled by StroWallet API
 // This page only displays user information and KYC status from StroWallet
@@ -41,8 +103,8 @@ $statusCounts = dbFetchOne("
     <p class="subtitle">View users and their KYC status (verified by StroWallet API)</p>
 </div>
 
-<div class="alert" style="background: #dbeafe; color: #1e40af; border: 1px solid #3b82f6; margin-bottom: 20px;">
-    ℹ️ <strong>Note:</strong> KYC verification is handled by StroWallet API. Status updates are received via StroWallet webhooks.
+<div class="alert" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.5); margin-bottom: 20px;">
+    ℹ️ <strong>Note:</strong> KYC verification is handled by StroWallet API. Click 🔄 to sync real-time status from StroWallet for each user.
 </div>
 
 <?php if ($message): ?>
@@ -114,11 +176,10 @@ $statusCounts = dbFetchOne("
                     </td>
                     <td><?php echo $user['kyc_submitted_at'] ? date('M d, Y H:i', strtotime($user['kyc_submitted_at'])) : 'Not submitted'; ?></td>
                     <td>
-                        <?php if ($user['kyc_status'] === 'pending'): ?>
-                            <button onclick="showKYCDetails(<?php echo $user['id']; ?>)" class="btn btn-primary btn-sm">Review</button>
-                        <?php else: ?>
-                            <button onclick="showKYCDetails(<?php echo $user['id']; ?>)" class="btn btn-sm">View</button>
-                        <?php endif; ?>
+                        <button onclick="showKYCDetails(<?php echo $user['id']; ?>)" class="btn btn-sm" style="margin-right: 5px;">View</button>
+                        <a href="?sync_user=<?php echo $user['id']; ?>&filter=<?php echo $filter; ?>" class="btn btn-success btn-sm" title="Sync from StroWallet">
+                            🔄
+                        </a>
                     </td>
                 </tr>
                 <?php endforeach; ?>
