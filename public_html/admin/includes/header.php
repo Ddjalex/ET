@@ -16,7 +16,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     <!-- Top Header Bar -->
     <header style="position: fixed; top: 0; left: 0; right: 0; height: 70px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; z-index: 1000;">
         <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #C9B382 0%, #A89968 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
                 💳
             </div>
             <span style="font-size: 1.25rem; font-weight: 700; color: #1f2937;">Admin Panel</span>
@@ -24,7 +24,7 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
         
         <div style="display: flex; align-items: center; gap: 1.5rem;">
             <button onclick="toggleUserMenu()" style="display: flex; align-items: center; gap: 0.75rem; background: #f3f4f6; padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer; position: relative;">
-                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px;">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #C9B382 0%, #A89968 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px;">
                     <?php echo strtoupper(substr($currentAdmin['username'], 0, 1)); ?>
                 </div>
                 <div style="text-align: left;">
@@ -66,28 +66,28 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     </script>
     
     <!-- Sidebar Navigation -->
-    <aside style="position: fixed; left: 0; top: 70px; width: 240px; height: calc(100vh - 70px); background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 1.5rem 0; overflow-y: auto; z-index: 100;">
+    <aside style="position: fixed; left: 0; top: 70px; width: 240px; height: calc(100vh - 70px); background: #0a0a0a; border-right: 1px solid #1a1a1a; padding: 1.5rem 0; overflow-y: auto; z-index: 100;">
         <ul style="list-style: none; padding: 0; margin: 0;">
-            <li style="margin-bottom: 0.25rem;">
-                <a href="/admin/dashboard.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'dashboard' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'dashboard' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'dashboard' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'dashboard' ? '600' : '500'; ?>; transition: all 0.2s;">
+            <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
+                <a href="/admin/dashboard.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'dashboard' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'dashboard' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'dashboard' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
                     <span style="font-size: 1.25rem;">📊</span>
                     <span>Dashboard</span>
                 </a>
             </li>
-            <li style="margin-bottom: 0.25rem;">
-                <a href="/admin/deposits.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'deposits' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'deposits' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'deposits' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'deposits' ? '600' : '500'; ?>; transition: all 0.2s;">
+            <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
+                <a href="/admin/deposits.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'deposits' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'deposits' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'deposits' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
                     <span style="font-size: 1.25rem;">💰</span>
                     <span>Deposits</span>
                 </a>
             </li>
-            <li style="margin-bottom: 0.25rem;">
-                <a href="/admin/kyc.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'kyc' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'kyc' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'kyc' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'kyc' ? '600' : '500'; ?>; transition: all 0.2s;">
+            <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
+                <a href="/admin/kyc.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'kyc' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'kyc' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'kyc' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
                     <span style="font-size: 1.25rem;">✓</span>
                     <span>KYC Verification</span>
                 </a>
             </li>
-            <li style="margin-bottom: 0.25rem;">
-                <a href="/admin/settings.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'settings' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'settings' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'settings' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'settings' ? '600' : '500'; ?>; transition: all 0.2s;">
+            <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
+                <a href="/admin/settings.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'settings' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'settings' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'settings' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
                     <span style="font-size: 1.25rem;">⚙️</span>
                     <span>Settings</span>
                 </a>
