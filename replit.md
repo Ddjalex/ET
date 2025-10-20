@@ -5,7 +5,25 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 **Current State:** Development complete, ready for cPanel deployment with actual API keys.
 
+## 🔐 Admin Panel Access
+
+**Admin Login Credentials (Development):**
+- **URL:** `/admin/login.php` or `/admin/`
+- **Username:** `admin`
+- **Password:** `admin123`
+- **⚠️ WARNING:** Change this password immediately for production use!
+
+See `ADMIN_CREDENTIALS.md` for detailed security information.
+
+---
+
 ## Recent Changes (October 20, 2025)
+- ✅ **IMPORT TO REPLIT COMPLETED** - Project successfully imported and configured
+  - PostgreSQL database created with all 9 tables
+  - Database migrations run successfully
+  - Fixed SSL mode configuration for Replit database
+  - Admin password hash corrected and verified
+  - All endpoints tested and working
 - ✅ **ADMIN PANEL SYSTEM IMPLEMENTED** - Complete admin panel for managing deposits, KYC, and settings
   - Database schema with 9 tables: users, wallets, wallet_transactions, deposits, cards, card_transactions, settings, admin_actions, admin_users
   - Admin authentication with session management and CSRF protection
