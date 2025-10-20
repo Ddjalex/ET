@@ -10,7 +10,7 @@ $messageType = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
     if (!verifyCSRFToken($_POST['csrf_token'])) {
         $message = 'Invalid security token. Please try again.';
-        $messageType = 'error';
+        $messageType = 'alert-error';
     } else {
         $action = $_POST['action'] ?? '';
         $adminId = $currentAdmin['id'];
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     [$adminId, json_encode(['key' => 'exchange_rate_usd_to_etb', 'rate' => $rate])]);
                 
                 $message = 'Exchange rate updated successfully!';
-                $messageType = 'success';
+                $messageType = 'alert-success';
                 
             } elseif ($action === 'update_deposit_fee') {
                 $percentage = floatval($_POST['deposit_fee_percentage']);
@@ -43,11 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     [$adminId, json_encode(['percentage' => $percentage, 'flat' => $flat])]);
                 
                 $message = 'Deposit fee updated successfully!';
-                $messageType = 'success';
+                $messageType = 'alert-success';
             }
         } catch (Exception $e) {
             $message = 'Error: ' . $e->getMessage();
-            $messageType = 'error';
+            $messageType = 'alert-error';
         }
     }
 }

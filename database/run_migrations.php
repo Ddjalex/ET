@@ -43,7 +43,8 @@ echo "Connected successfully!\n\n";
 $migrations = [
     '001_create_schema.sql',
     '002_fix_admin_fk.sql',
-    '003_fix_settings_fkey.sql'
+    '003_fix_settings_fkey.sql',
+    '004_fix_admin_actions_fk.sql'
 ];
 
 foreach ($migrations as $migration) {

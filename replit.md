@@ -47,6 +47,13 @@ The admin panel features an **ultra-premium, modern design** with extensive enha
 ### System Design Choices
 The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
 
+### Recent Changes (October 20, 2025)
+- **Database Setup**: PostgreSQL database provisioned and all migrations applied successfully (9 tables created)
+- **Foreign Key Fixes**: Corrected `admin_actions` and `settings` tables to reference `admin_users` instead of `users` table
+- **Admin Login**: Fixed default admin password to match login page (username: `admin`, password: `admin123`)
+- **UI/Alert Fixes**: Corrected alert message CSS classes from `error`/`success` to `alert-error`/`alert-success` for proper styling
+- **Migration System**: Added migration 004 to document foreign key constraint fixes
+
 ### Features Implemented
 - **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/invite`, `/support`.
 - **Reply Keyboard Buttons:** Create Card, My Cards, User Info, Wallet, Invite Friends, Support.
