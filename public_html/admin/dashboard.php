@@ -73,11 +73,12 @@ $recentActivities = dbFetchAll("
         
         let hours = now.getHours();
         const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
         const ampm = hours >= 12 ? 'PM' : 'AM';
         hours = hours % 12;
         hours = hours ? hours : 12;
         
-        const timeString = `${dayName}, ${monthName} ${date}, ${year} • ${hours}:${minutes} ${ampm}`;
+        const timeString = `${dayName}, ${monthName} ${date}, ${year} • ${hours}:${minutes}:${seconds} ${ampm}`;
         
         document.getElementById('live-clock').textContent = timeString;
     }
