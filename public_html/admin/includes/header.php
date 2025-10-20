@@ -13,82 +13,87 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
     <link rel="stylesheet" href="/admin/assets/admin-styles.css">
 </head>
 <body>
-    <!-- Sidebar Navigation -->
-    <aside class="admin-sidebar">
-        <div class="sidebar-brand">
-            <div class="sidebar-logo">💳</div>
-            <div class="sidebar-title">Crypto Card Admin</div>
+    <!-- Top Header Bar -->
+    <header style="position: fixed; top: 0; left: 0; right: 0; height: 70px; background: white; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between; padding: 0 2rem; z-index: 1000;">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px;">
+                💳
+            </div>
+            <span style="font-size: 1.25rem; font-weight: 700; color: #1f2937;">Admin Panel</span>
         </div>
         
-        <ul class="sidebar-nav">
-            <li class="sidebar-nav-item">
-                <a href="/admin/dashboard.php" class="sidebar-nav-link <?php echo $currentPage === 'dashboard' ? 'active' : ''; ?>">
-                    <span>📊</span> Dashboard
+        <div style="display: flex; align-items: center; gap: 1.5rem;">
+            <button onclick="toggleUserMenu()" style="display: flex; align-items: center; gap: 0.75rem; background: #f3f4f6; padding: 0.5rem 1rem; border-radius: 8px; border: none; cursor: pointer; position: relative;">
+                <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px;">
+                    <?php echo strtoupper(substr($currentAdmin['username'], 0, 1)); ?>
+                </div>
+                <div style="text-align: left;">
+                    <div style="font-weight: 600; font-size: 0.875rem; color: #1f2937;">
+                        <?php echo htmlspecialchars($currentAdmin['full_name'] ?: $currentAdmin['username']); ?>
+                    </div>
+                    <div style="font-size: 0.75rem; color: #6b7280;">
+                        <?php echo htmlspecialchars(str_replace('_', ' ', $currentAdmin['role'])); ?>
+                    </div>
+                </div>
+                <span style="color: #9ca3af;">▼</span>
+                
+                <!-- User Dropdown Menu -->
+                <div id="userMenu" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: white; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); min-width: 200px; overflow: hidden;">
+                    <a href="/admin/change-password.php" style="display: block; padding: 0.75rem 1rem; color: #374151; text-decoration: none; transition: background 0.2s; border-bottom: 1px solid #f3f4f6;">
+                        🔐 Change Password
+                    </a>
+                    <a href="/admin/logout.php" style="display: block; padding: 0.75rem 1rem; color: #dc2626; text-decoration: none; transition: background 0.2s;">
+                        🚪 Log Out
+                    </a>
+                </div>
+            </button>
+        </div>
+    </header>
+    
+    <script>
+    function toggleUserMenu() {
+        const menu = document.getElementById('userMenu');
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+        const userMenu = document.getElementById('userMenu');
+        const button = event.target.closest('button[onclick="toggleUserMenu()"]');
+        if (!button && userMenu && userMenu.style.display === 'block') {
+            userMenu.style.display = 'none';
+        }
+    });
+    </script>
+    
+    <!-- Sidebar Navigation -->
+    <aside style="position: fixed; left: 0; top: 70px; width: 240px; height: calc(100vh - 70px); background: #f9fafb; border-right: 1px solid #e5e7eb; padding: 1.5rem 0; overflow-y: auto; z-index: 100;">
+        <ul style="list-style: none; padding: 0; margin: 0;">
+            <li style="margin-bottom: 0.25rem;">
+                <a href="/admin/dashboard.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'dashboard' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'dashboard' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'dashboard' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'dashboard' ? '600' : '500'; ?>; transition: all 0.2s;">
+                    <span style="font-size: 1.25rem;">📊</span>
+                    <span>Dashboard</span>
                 </a>
             </li>
-            <li class="sidebar-nav-item">
-                <a href="/admin/deposits.php" class="sidebar-nav-link <?php echo $currentPage === 'deposits' ? 'active' : ''; ?>">
-                    <span>💰</span> Deposits
+            <li style="margin-bottom: 0.25rem;">
+                <a href="/admin/deposits.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'deposits' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'deposits' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'deposits' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'deposits' ? '600' : '500'; ?>; transition: all 0.2s;">
+                    <span style="font-size: 1.25rem;">💰</span>
+                    <span>Deposits</span>
                 </a>
             </li>
-            <li class="sidebar-nav-item">
-                <a href="/admin/kyc.php" class="sidebar-nav-link <?php echo $currentPage === 'kyc' ? 'active' : ''; ?>">
-                    <span>✓</span> KYC Verification
+            <li style="margin-bottom: 0.25rem;">
+                <a href="/admin/kyc.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'kyc' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'kyc' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'kyc' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'kyc' ? '600' : '500'; ?>; transition: all 0.2s;">
+                    <span style="font-size: 1.25rem;">✓</span>
+                    <span>KYC Verification</span>
                 </a>
             </li>
-            <li class="sidebar-nav-item">
-                <a href="/admin/settings.php" class="sidebar-nav-link <?php echo $currentPage === 'settings' ? 'active' : ''; ?>">
-                    <span>⚙️</span> Settings
+            <li style="margin-bottom: 0.25rem;">
+                <a href="/admin/settings.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; color: <?php echo $currentPage === 'settings' ? '#667eea' : '#6b7280'; ?>; text-decoration: none; background: <?php echo $currentPage === 'settings' ? '#ede9fe' : 'transparent'; ?>; border-left: 3px solid <?php echo $currentPage === 'settings' ? '#667eea' : 'transparent'; ?>; font-weight: <?php echo $currentPage === 'settings' ? '600' : '500'; ?>; transition: all 0.2s;">
+                    <span style="font-size: 1.25rem;">⚙️</span>
+                    <span>Settings</span>
                 </a>
             </li>
         </ul>
-        
-        <!-- More Options Menu -->
-        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--card-border); position: relative;">
-            <button onclick="toggleMoreMenu()" class="sidebar-nav-link" style="width: 100%; display: flex; align-items: center; justify-content: space-between; background: transparent; border: none; cursor: pointer; padding: 0.75rem 1rem; border-radius: var(--radius-sm); transition: all 0.3s ease;">
-                <span style="display: flex; align-items: center; gap: var(--spacing-sm);">
-                    <span>⋮</span> More Options
-                </span>
-                <span id="moreMenuArrow" style="transition: transform 0.3s ease;">▼</span>
-            </button>
-            
-            <div id="moreMenu" style="display: none; margin-top: 0.5rem; background: var(--bg-secondary); border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--card-border);">
-                <a href="/admin/change-password.php" class="sidebar-nav-link <?php echo $currentPage === 'change-password' ? 'active' : ''; ?>" style="border-radius: 0;">
-                    <span>🔐</span> Change Password
-                </a>
-                <a href="/admin/logout.php" class="sidebar-nav-link" style="color: #ef4444; border-radius: 0;">
-                    <span>🚪</span> Logout
-                </a>
-            </div>
-        </div>
-        
-        <script>
-        function toggleMoreMenu() {
-            const menu = document.getElementById('moreMenu');
-            const arrow = document.getElementById('moreMenuArrow');
-            if (menu.style.display === 'none') {
-                menu.style.display = 'block';
-                arrow.style.transform = 'rotate(180deg)';
-            } else {
-                menu.style.display = 'none';
-                arrow.style.transform = 'rotate(0deg)';
-            }
-        }
-        </script>
-        
-        <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--card-border);">
-            <div style="padding: 0.75rem 1rem; background: var(--glass-bg); border-radius: var(--radius-sm);">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <div class="user-avatar"><?php echo strtoupper(substr($currentAdmin['username'], 0, 1)); ?></div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 600; font-size: 0.9rem; color: var(--text-primary); truncate;">
-                            <?php echo htmlspecialchars($currentAdmin['full_name'] ?: $currentAdmin['username']); ?>
-                        </div>
-                        <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">
-                            <?php echo htmlspecialchars(str_replace('_', ' ', $currentAdmin['role'])); ?>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </aside>
+
+    <!-- Main Content Area -->
+    <main style="margin-left: 240px; margin-top: 70px; padding: 2rem; min-height: calc(100vh - 70px); background: #ffffff;">
