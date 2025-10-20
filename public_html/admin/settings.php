@@ -124,43 +124,47 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
         </p>
         
         <!-- Live Rate Fetcher -->
-        <div style="background: rgba(59, 130, 246, 0.1); border: 2px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-                <button type="button" onclick="fetchLiveRate()" class="btn btn-secondary" style="background: #3b82f6; color: white;">
+        <div style="background: rgba(59, 130, 246, 0.1); border: 2px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <div style="margin-bottom: 15px;">
+                <button type="button" onclick="fetchLiveRate()" class="btn btn-secondary" style="background: #3b82f6; color: white; width: 100%; padding: 12px 20px; font-size: 15px;">
                     🌐 Fetch Current Market Rate
                 </button>
-                <span id="fetchStatus" style="font-size: 14px; color: #60a5fa;"></span>
             </div>
-            <div id="liveRateDisplay" style="display: none; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; margin-top: 10px;">
-                <strong style="color: #60a5fa;">Live Rate:</strong> 
-                <span id="liveRateValue" style="font-size: 18px; font-weight: 700; color: #10b981;"></span>
-                <button type="button" onclick="useLiveRate()" style="margin-left: 15px; padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+            <div style="margin-bottom: 10px;">
+                <span id="fetchStatus" style="font-size: 14px; color: #60a5fa; display: block; text-align: center;"></span>
+            </div>
+            <div id="liveRateDisplay" style="display: none; padding: 15px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; margin-top: 10px; text-align: center;">
+                <div style="margin-bottom: 12px;">
+                    <strong style="color: #60a5fa;">Live Rate:</strong> 
+                    <span id="liveRateValue" style="font-size: 20px; font-weight: 700; color: #10b981; display: block; margin-top: 8px;"></span>
+                </div>
+                <button type="button" onclick="useLiveRate()" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; width: 100%;">
                     ✓ Use This Rate
                 </button>
             </div>
         </div>
         
         <!-- Exchange Rate Calculator -->
-        <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 12px 0; color: #fbbf24; font-size: 15px;">📊 Exchange Calculator</h4>
-            <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
+        <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 20px 0; color: #fbbf24; font-size: 16px; font-weight: 700;">📊 Exchange Calculator</h4>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
                 <div>
-                    <label style="display: block; font-size: 13px; color: #fcd34d; margin-bottom: 5px;">USD Amount</label>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #fcd34d; margin-bottom: 8px;">USD Amount</label>
                     <input type="number" id="calc_usd" value="50" step="0.01" min="0" 
                            oninput="calculateETB()"
-                           style="width: 100%; padding: 10px; border: 2px solid #f59e0b; border-radius: 6px; font-size: 16px; font-weight: 600; background: rgba(30, 41, 59, 0.95); color: #f1f5f9;">
+                           style="width: 100%; padding: 14px; border: 2px solid #f59e0b; border-radius: 8px; font-size: 18px; font-weight: 600; background: rgba(30, 41, 59, 0.95); color: #f1f5f9;">
                 </div>
-                <div style="text-align: center; padding-top: 20px;">
-                    <span style="font-size: 20px; color: #cbd5e1;">→</span>
+                <div style="text-align: center; color: #cbd5e1; font-size: 24px; font-weight: 700;">
+                    ↓
                 </div>
                 <div>
-                    <label style="display: block; font-size: 13px; color: #6ee7b7; margin-bottom: 5px;">ETB Amount</label>
+                    <label style="display: block; font-size: 14px; font-weight: 600; color: #6ee7b7; margin-bottom: 8px;">ETB Amount</label>
                     <input type="text" id="calc_etb" readonly 
-                           style="width: 100%; padding: 10px; border: 2px solid #10b981; border-radius: 6px; font-size: 16px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #6ee7b7;">
+                           style="width: 100%; padding: 14px; border: 2px solid #10b981; border-radius: 8px; font-size: 18px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; text-align: center;">
                 </div>
             </div>
-            <p style="margin: 10px 0 0 0; font-size: 13px; color: #fcd34d;">
-                Rate: 1 USD = <strong id="calc_rate"><?php echo number_format($exchangeRate, 2); ?></strong> ETB
+            <p style="margin: 20px 0 0 0; font-size: 14px; color: #fcd34d; text-align: center; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 6px;">
+                <strong>Exchange Rate:</strong> 1 USD = <strong id="calc_rate" style="font-size: 16px;"><?php echo number_format($exchangeRate, 2); ?></strong> ETB
             </p>
         </div>
         
