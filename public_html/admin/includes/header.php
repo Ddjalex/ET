@@ -41,17 +41,40 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                     <span>⚙️</span> Settings
                 </a>
             </li>
-            <li class="sidebar-nav-item" style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--card-border);">
-                <a href="/admin/change-password.php" class="sidebar-nav-link <?php echo $currentPage === 'change-password' ? 'active' : ''; ?>">
+        </ul>
+        
+        <!-- More Options Menu -->
+        <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid var(--card-border); position: relative;">
+            <button onclick="toggleMoreMenu()" class="sidebar-nav-link" style="width: 100%; display: flex; align-items: center; justify-content: space-between; background: transparent; border: none; cursor: pointer; padding: 0.75rem 1rem; border-radius: var(--radius-sm); transition: all 0.3s ease;">
+                <span style="display: flex; align-items: center; gap: var(--spacing-sm);">
+                    <span>⋮</span> More Options
+                </span>
+                <span id="moreMenuArrow" style="transition: transform 0.3s ease;">▼</span>
+            </button>
+            
+            <div id="moreMenu" style="display: none; margin-top: 0.5rem; background: var(--bg-secondary); border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--card-border);">
+                <a href="/admin/change-password.php" class="sidebar-nav-link <?php echo $currentPage === 'change-password' ? 'active' : ''; ?>" style="border-radius: 0;">
                     <span>🔐</span> Change Password
                 </a>
-            </li>
-            <li class="sidebar-nav-item">
-                <a href="/admin/logout.php" class="sidebar-nav-link" style="color: #ef4444;">
+                <a href="/admin/logout.php" class="sidebar-nav-link" style="color: #ef4444; border-radius: 0;">
                     <span>🚪</span> Logout
                 </a>
-            </li>
-        </ul>
+            </div>
+        </div>
+        
+        <script>
+        function toggleMoreMenu() {
+            const menu = document.getElementById('moreMenu');
+            const arrow = document.getElementById('moreMenuArrow');
+            if (menu.style.display === 'none') {
+                menu.style.display = 'block';
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                menu.style.display = 'none';
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        }
+        </script>
         
         <div style="margin-top: auto; padding-top: 2rem; border-top: 1px solid var(--card-border);">
             <div style="padding: 0.75rem 1rem; background: var(--glass-bg); border-radius: var(--radius-sm);">
