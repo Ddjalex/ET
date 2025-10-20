@@ -21,8 +21,9 @@ $host = $matches[3] ?? 'localhost';
 $dbname = $matches[4] ?? 'postgres';
 
 // Build connection string for pg_connect
+// Note: Replit's internal PostgreSQL uses sslmode=prefer for security while maintaining compatibility
 $connString = sprintf(
-    "host=%s port=5432 dbname=%s user=%s password=%s sslmode=disable",
+    "host=%s port=5432 dbname=%s user=%s password=%s sslmode=prefer",
     $host,
     $dbname,
     $user,

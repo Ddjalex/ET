@@ -31,12 +31,12 @@ function getDBConnection() {
     $pass = $parts['pass'] ?? '';
     $dbname = ltrim($parts['path'] ?? '', '/');
     
-    // Parse query string for sslmode
+    // Parse query string for sslmode (prefer SSL for security)
     $queryParams = [];
-    $sslmode = 'disable';
+    $sslmode = 'prefer';
     if (isset($parts['query'])) {
         parse_str($parts['query'], $queryParams);
-        $sslmode = $queryParams['sslmode'] ?? 'disable';
+        $sslmode = $queryParams['sslmode'] ?? 'prefer';
     }
     
     $dsn = "pgsql:host={$host};port={$port};dbname={$dbname};sslmode={$sslmode}";
