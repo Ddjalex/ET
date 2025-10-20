@@ -144,27 +144,21 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             </div>
         </div>
         
-        <!-- Exchange Rate Calculator -->
-        <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 20px 0; color: #fbbf24; font-size: 16px; font-weight: 700;">📊 Exchange Calculator</h4>
-            <div style="display: grid; grid-template-columns: 1fr; gap: 20px;">
-                <div>
-                    <label style="display: block; font-size: 14px; font-weight: 600; color: #fcd34d; margin-bottom: 8px;">USD Amount</label>
-                    <input type="number" id="calc_usd" value="50" step="0.01" min="0" 
-                           oninput="calculateETB()"
-                           style="width: 100%; padding: 14px; border: 2px solid #f59e0b; border-radius: 8px; font-size: 18px; font-weight: 600; background: rgba(30, 41, 59, 0.95); color: #f1f5f9;">
-                </div>
-                <div style="text-align: center; color: #cbd5e1; font-size: 24px; font-weight: 700;">
-                    ↓
-                </div>
-                <div>
-                    <label style="display: block; font-size: 14px; font-weight: 600; color: #6ee7b7; margin-bottom: 8px;">ETB Amount</label>
-                    <input type="text" id="calc_etb" readonly 
-                           style="width: 100%; padding: 14px; border: 2px solid #10b981; border-radius: 8px; font-size: 18px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; text-align: center;">
-                </div>
+        <!-- Exchange Rate Calculator - Compact Version -->
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 12px; margin-bottom: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #fbbf24; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📊 Calculator</h4>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" id="calc_usd" value="50" step="0.01" min="0" 
+                       oninput="calculateETB()"
+                       placeholder="USD"
+                       style="flex: 1; padding: 6px 8px; border: 1px solid #f59e0b; border-radius: 4px; font-size: 13px; font-weight: 600; background: rgba(30, 41, 59, 0.95); color: #fbbf24; text-align: center;">
+                <span style="color: #94a3b8; font-size: 12px; font-weight: 700;">=</span>
+                <input type="text" id="calc_etb" readonly 
+                       placeholder="ETB"
+                       style="flex: 1; padding: 6px 8px; border: 1px solid #10b981; border-radius: 4px; font-size: 13px; font-weight: 600; background: rgba(16, 185, 129, 0.1); color: #6ee7b7; text-align: center;">
             </div>
-            <p style="margin: 20px 0 0 0; font-size: 14px; color: #fcd34d; text-align: center; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: 6px;">
-                <strong>Exchange Rate:</strong> 1 USD = <strong id="calc_rate" style="font-size: 16px;"><?php echo number_format($exchangeRate, 2); ?></strong> ETB
+            <p style="margin: 8px 0 0 0; font-size: 10px; color: #94a3b8; text-align: center;">
+                Rate: <strong id="calc_rate" style="color: #fbbf24;"><?php echo number_format($exchangeRate, 2); ?></strong> ETB
             </p>
         </div>
         
