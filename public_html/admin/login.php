@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #C9B382 0%, #A89968 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -125,7 +125,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 24px;
             box-shadow: 
                 0 20px 60px rgba(0, 0, 0, 0.3),
-                0 0 80px rgba(102, 126, 234, 0.4),
+                0 0 80px rgba(201, 179, 130, 0.4),
                 inset 0 1px 0 rgba(255, 255, 255, 0.8);
             width: 100%;
             max-width: 460px;
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 50%, #667eea 100%);
+            background: linear-gradient(90deg, #C9B382 0%, #A89968 50%, #C9B382 100%);
             background-size: 200% 100%;
             border-radius: 24px 24px 0 0;
             animation: shimmer 3s linear infinite;
@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .logo-icon {
             width: 85px;
             height: 85px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #C9B382 0%, #A89968 100%);
             border-radius: 20px;
             display: inline-flex;
             align-items: center;
@@ -161,8 +161,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 42px;
             margin-bottom: 18px;
             box-shadow: 
-                0 8px 24px rgba(102, 126, 234, 0.4),
-                0 0 40px rgba(102, 126, 234, 0.3);
+                0 8px 24px rgba(201, 179, 130, 0.4),
+                0 0 40px rgba(201, 179, 130, 0.3);
             transition: all 0.3s ease;
             animation: pulse 3s ease-in-out infinite;
         }
@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         .logo-icon:hover {
             transform: rotate(360deg) scale(1.1);
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.6);
+            box-shadow: 0 10px 30px rgba(201, 179, 130, 0.6);
         }
         h1 {
             color: #1a202c;
@@ -215,11 +215,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         input[type="text"]:focus,
         input[type="password"]:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #C9B382;
             background: white;
             box-shadow: 
-                0 0 0 4px rgba(102, 126, 234, 0.15),
-                0 4px 12px rgba(102, 126, 234, 0.2);
+                0 0 0 4px rgba(201, 179, 130, 0.15),
+                0 4px 12px rgba(201, 179, 130, 0.2);
             transform: translateY(-2px);
         }
         .password-wrapper {
@@ -244,8 +244,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-radius: 8px;
         }
         .password-toggle:hover {
-            color: #667eea;
-            background: rgba(102, 126, 234, 0.1);
+            color: #C9B382;
+            background: rgba(201, 179, 130, 0.1);
         }
         .password-toggle svg {
             width: 22px;
@@ -254,7 +254,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button[type="submit"] {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #C9B382 0%, #A89968 100%);
             color: white;
             border: none;
             border-radius: 12px;
@@ -263,8 +263,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: 
-                0 8px 20px rgba(102, 126, 234, 0.4),
-                0 0 40px rgba(102, 126, 234, 0.2);
+                0 8px 20px rgba(201, 179, 130, 0.4),
+                0 0 40px rgba(201, 179, 130, 0.2);
             position: relative;
             overflow: hidden;
         }
@@ -284,8 +284,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         button[type="submit"]:hover {
             transform: translateY(-3px);
             box-shadow: 
-                0 12px 28px rgba(102, 126, 234, 0.5),
-                0 0 60px rgba(102, 126, 234, 0.4);
+                0 12px 28px rgba(201, 179, 130, 0.5),
+                0 0 60px rgba(201, 179, 130, 0.4);
         }
         button[type="submit"]:active {
             transform: translateY(-1px);
