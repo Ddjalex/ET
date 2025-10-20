@@ -33,15 +33,16 @@ The project is organized into `database/` for migrations, `public_html/` contain
 - **Admin Panel:** PHP with session-based authentication, featuring a professional crypto-themed UI with a comprehensive CSS design system, modern typography (Inter, Poppins), glass-morphism effects, and responsive components.
 
 ### UI/UX Decisions
-The admin panel features a **clean, professional design** with focus on usability:
-- **Simple Design System**: Clean white cards on light gray background
-- **Solid Colors**: No gradients or glass effects - solid color scheme
-- **Clear Typography**: Inter font family for consistency
-- **Subtle Shadows**: Minimal shadows for depth without distraction
-- **Professional Color System**: Indigo primary (#4f46e5), green success, red error, yellow warning, blue info
+The admin panel features **premium glass-morphism design with enhanced visibility**:
+- **Glass Morphism Effects**: Backdrop blur effects with clear borders and high contrast
+- **Gradient System**: Beautiful gradients (blue/purple primary) with text shadows for readability
+- **Enhanced Text Contrast**: Bright text colors (#f8fafc) with text shadows on glass backgrounds
+- **Animated Backgrounds**: Particle effects and floating card backgrounds at lower opacity
+- **Premium Stat Cards**: Gradient top borders, large icons, bold values with shadows
+- **Modern Typography**: Inter (400-900), Poppins (600-900) for headings with high contrast
+- **High Visibility Alerts**: Glass effect alerts with bright, clear colors
 - **Responsive Components**: Mobile-optimized layouts, adaptive grids
-- **Accessibility First**: High contrast, clear borders, readable text
-- Last updated: October 2025 - Simplified to clean design without glass-morphism or gradients
+- Last updated: October 2025 - Glass-morphism with enhanced visibility and contrast
 
 ### System Design Choices
 The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
