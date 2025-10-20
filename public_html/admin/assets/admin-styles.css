@@ -24,9 +24,9 @@
     --accent-pink: #ec4899;
     
     /* Background Colors - Dark theme with good contrast */
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-tertiary: #334155;
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #2a2a2a;
     
     /* Text Colors - High contrast for readability */
     --text-primary: #f8fafc;
@@ -74,8 +74,8 @@
 
 body {
     font-family: var(--font-primary);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: #0a0a0a;
+    color: #ffffff;
     line-height: 1.6;
     min-height: 100vh;
     overflow-x: hidden;
