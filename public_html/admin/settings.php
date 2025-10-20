@@ -119,47 +119,47 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
 <div class="settings-grid">
     <div class="card">
         <h3>💱 Exchange Rate (USD to ETB)</h3>
-        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+        <p style="color: #94a3b8; margin-bottom: 20px; font-size: 14px;">
             Set the exchange rate for converting customer deposits from ETB to USD wallet balance.
         </p>
         
         <!-- Live Rate Fetcher -->
-        <div style="background: #f0f9ff; border: 2px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+        <div style="background: rgba(59, 130, 246, 0.1); border: 2px solid #3b82f6; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
                 <button type="button" onclick="fetchLiveRate()" class="btn btn-secondary" style="background: #3b82f6; color: white;">
                     🌐 Fetch Current Market Rate
                 </button>
-                <span id="fetchStatus" style="font-size: 14px; color: #1e40af;"></span>
+                <span id="fetchStatus" style="font-size: 14px; color: #60a5fa;"></span>
             </div>
-            <div id="liveRateDisplay" style="display: none; padding: 12px; background: white; border-radius: 6px; margin-top: 10px;">
-                <strong style="color: #1e40af;">Live Rate:</strong> 
-                <span id="liveRateValue" style="font-size: 18px; font-weight: 700; color: #059669;"></span>
-                <button type="button" onclick="useLiveRate()" style="margin-left: 15px; padding: 6px 12px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
+            <div id="liveRateDisplay" style="display: none; padding: 12px; background: rgba(255, 255, 255, 0.05); border-radius: 6px; margin-top: 10px;">
+                <strong style="color: #60a5fa;">Live Rate:</strong> 
+                <span id="liveRateValue" style="font-size: 18px; font-weight: 700; color: #10b981;"></span>
+                <button type="button" onclick="useLiveRate()" style="margin-left: 15px; padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">
                     ✓ Use This Rate
                 </button>
             </div>
         </div>
         
         <!-- Exchange Rate Calculator -->
-        <div style="background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 12px 0; color: #92400e; font-size: 15px;">📊 Exchange Calculator</h4>
+        <div style="background: rgba(245, 158, 11, 0.1); border: 2px solid #f59e0b; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 12px 0; color: #fbbf24; font-size: 15px;">📊 Exchange Calculator</h4>
             <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center;">
                 <div>
-                    <label style="display: block; font-size: 13px; color: #78350f; margin-bottom: 5px;">USD Amount</label>
+                    <label style="display: block; font-size: 13px; color: #fcd34d; margin-bottom: 5px;">USD Amount</label>
                     <input type="number" id="calc_usd" value="50" step="0.01" min="0" 
                            oninput="calculateETB()"
-                           style="width: 100%; padding: 10px; border: 2px solid #f59e0b; border-radius: 6px; font-size: 16px; font-weight: 600;">
+                           style="width: 100%; padding: 10px; border: 2px solid #f59e0b; border-radius: 6px; font-size: 16px; font-weight: 600; background: rgba(30, 41, 59, 0.95); color: #f1f5f9;">
                 </div>
                 <div style="text-align: center; padding-top: 20px;">
-                    <span style="font-size: 20px;">→</span>
+                    <span style="font-size: 20px; color: #cbd5e1;">→</span>
                 </div>
                 <div>
-                    <label style="display: block; font-size: 13px; color: #78350f; margin-bottom: 5px;">ETB Amount</label>
+                    <label style="display: block; font-size: 13px; color: #6ee7b7; margin-bottom: 5px;">ETB Amount</label>
                     <input type="text" id="calc_etb" readonly 
-                           style="width: 100%; padding: 10px; border: 2px solid #10b981; border-radius: 6px; font-size: 16px; font-weight: 600; background: #d1fae5; color: #065f46;">
+                           style="width: 100%; padding: 10px; border: 2px solid #10b981; border-radius: 6px; font-size: 16px; font-weight: 600; background: rgba(16, 185, 129, 0.15); color: #6ee7b7;">
                 </div>
             </div>
-            <p style="margin: 10px 0 0 0; font-size: 13px; color: #92400e;">
+            <p style="margin: 10px 0 0 0; font-size: 13px; color: #fcd34d;">
                 Rate: 1 USD = <strong id="calc_rate"><?php echo number_format($exchangeRate, 2); ?></strong> ETB
             </p>
         </div>
@@ -169,16 +169,16 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             <input type="hidden" name="action" value="update_exchange_rate">
             
             <div class="form-group" style="margin-bottom: 20px;">
-                <label for="exchange_rate" style="display: block; margin-bottom: 8px; font-weight: 600;">
+                <label for="exchange_rate" style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9;">
                     Exchange Rate (1 USD = ? ETB)
                 </label>
                 <input type="number" id="exchange_rate" name="exchange_rate" 
                        placeholder="Enter rate (e.g., 130.50)" 
                        step="0.01" min="0.01" required
                        oninput="updateCalculatorRate()"
-                       style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px;">
-                <small style="color: #666; display: block; margin-top: 8px;">
-                    💡 <strong>Saved Rate:</strong> 1 USD = <?php echo number_format($exchangeRate, 2); ?> ETB
+                       class="form-control">
+                <small style="color: #94a3b8; display: block; margin-top: 8px;">
+                    💡 <strong style="color: #cbd5e1;">Saved Rate:</strong> 1 USD = <?php echo number_format($exchangeRate, 2); ?> ETB
                     <span style="color: #3b82f6; cursor: pointer; margin-left: 10px;" onclick="document.getElementById('exchange_rate').value = <?php echo $exchangeRate; ?>; updateCalculatorRate();">
                         [Click to use this rate]
                     </span>
@@ -225,7 +225,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
                     valueEl.textContent = '1 USD = ' + rate.toFixed(2) + ' ETB';
                     displayEl.style.display = 'block';
                     statusEl.textContent = '✅ Rate fetched successfully!';
-                    statusEl.style.color = '#059669';
+                    statusEl.style.color = '#10b981';
                     
                     // Store the fetched rate
                     window.fetchedRate = rate;
@@ -234,7 +234,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
                 }
             } catch (error) {
                 statusEl.textContent = '❌ Failed to fetch rate. Please enter manually.';
-                statusEl.style.color = '#dc2626';
+                statusEl.style.color = '#ef4444';
                 console.error('Error fetching exchange rate:', error);
             }
         }
@@ -245,7 +245,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
                 document.getElementById('exchange_rate').value = window.fetchedRate.toFixed(2);
                 updateCalculatorRate();
                 document.getElementById('fetchStatus').textContent = '✓ Live rate applied! Click "Update Exchange Rate" to save.';
-                document.getElementById('fetchStatus').style.color = '#059669';
+                document.getElementById('fetchStatus').style.color = '#10b981';
             }
         }
         
@@ -255,7 +255,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
 
     <div class="card">
         <h3>💸 Deposit Fee (Optional)</h3>
-        <p style="color: #666; margin-bottom: 20px; font-size: 14px;">
+        <p style="color: #94a3b8; margin-bottom: 20px; font-size: 14px;">
             Set fees charged to customers when they deposit ETB to their USD wallet.
         </p>
         <form method="POST" style="max-width: 500px;">
@@ -263,25 +263,25 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             <input type="hidden" name="action" value="update_deposit_fee">
             
             <div class="form-group" style="margin-bottom: 20px;">
-                <label for="deposit_fee_percentage" style="display: block; margin-bottom: 8px; font-weight: 600;">
+                <label for="deposit_fee_percentage" style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9;">
                     Percentage Fee (%)
                 </label>
                 <input type="number" id="deposit_fee_percentage" name="deposit_fee_percentage" 
                        value="<?php echo $depositFee['percentage']; ?>" 
                        step="0.01" min="0" required
-                       style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px;">
+                       class="form-control">
             </div>
             
             <div class="form-group" style="margin-bottom: 20px;">
-                <label for="deposit_fee_flat" style="display: block; margin-bottom: 8px; font-weight: 600;">
+                <label for="deposit_fee_flat" style="display: block; margin-bottom: 8px; font-weight: 600; color: #f1f5f9;">
                     Flat Fee (ETB)
                 </label>
                 <input type="number" id="deposit_fee_flat" name="deposit_fee_flat" 
                        value="<?php echo $depositFee['flat']; ?>" 
                        step="0.01" min="0" required
-                       style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 15px;">
-                <small style="color: #666; display: block; margin-top: 8px;">
-                    <strong>Current:</strong> <?php echo $depositFee['percentage']; ?>% + <?php echo number_format($depositFee['flat'], 2); ?> ETB
+                       class="form-control">
+                <small style="color: #94a3b8; display: block; margin-top: 8px;">
+                    <strong style="color: #cbd5e1;">Current:</strong> <?php echo $depositFee['percentage']; ?>% + <?php echo number_format($depositFee['flat'], 2); ?> ETB
                 </small>
             </div>
             
@@ -290,14 +290,14 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
     </div>
 </div>
 
-<div class="card" style="background: #f7fafc; border: 2px solid #e2e8f0;">
-    <h3 style="color: #2d3748;">ℹ️ Important Information</h3>
-    <div style="color: #4a5568; line-height: 1.6;">
+<div class="card" style="background: rgba(59, 130, 246, 0.05); border: 2px solid rgba(59, 130, 246, 0.3);">
+    <h3 style="color: #60a5fa;">ℹ️ Important Information</h3>
+    <div style="color: #cbd5e1; line-height: 1.6;">
         <p style="margin-bottom: 12px;">
-            <strong>Card Management:</strong> Card creation, card limits, and card fees are all managed by StroWallet API automatically through the Telegram bot. You don't need to configure these settings.
+            <strong style="color: #f1f5f9;">Card Management:</strong> Card creation, card limits, and card fees are all managed by StroWallet API automatically through the Telegram bot. You don't need to configure these settings.
         </p>
         <p style="margin-bottom: 12px;">
-            <strong>Your Responsibilities:</strong>
+            <strong style="color: #f1f5f9;">Your Responsibilities:</strong>
         </p>
         <ul style="margin-left: 20px; margin-bottom: 12px;">
             <li>View customer KYC status (verified by StroWallet)</li>
@@ -306,7 +306,7 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             <li>Set deposit fees (if applicable)</li>
         </ul>
         <p>
-            <strong>After Deposit Approval:</strong> Once you add money to a customer's wallet, they can use the Telegram bot to create and manage cards via StroWallet API.
+            <strong style="color: #f1f5f9;">After Deposit Approval:</strong> Once you add money to a customer's wallet, they can use the Telegram bot to create and manage cards via StroWallet API.
         </p>
     </div>
 </div>
