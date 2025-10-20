@@ -5,7 +5,20 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 **Current State:** Development complete, ready for cPanel deployment with actual API keys.
 
-## Recent Changes (October 11, 2025)
+## Recent Changes (October 20, 2025)
+- ✅ **ADMIN PANEL SYSTEM IMPLEMENTED** - Complete admin panel for managing deposits, KYC, and settings
+  - Database schema with 9 tables: users, wallets, wallet_transactions, deposits, cards, card_transactions, settings, admin_actions, admin_users
+  - Admin authentication with session management and CSRF protection
+  - Deposit approval workflow with wallet balance updates
+  - KYC verification system
+  - Settings management (exchange rates, fees, limits)
+  - Dashboard with statistics and pending items
+  - Fixed database connection handling (singleton pattern for transactions)
+  - Fixed foreign key references (admin_users instead of users)
+- ✅ **WALLET SYSTEM** - Users can now have wallet balances tracked in database
+- ✅ **DEPOSIT WORKFLOW** - ETB to USD conversion with admin approval
+
+## Previous Changes (October 11, 2025)
 - ✅ Initial project setup with PHP 8.2
 - ✅ Created dual webhook architecture (Telegram + StroWallet)
 - ✅ Implemented all core features: card creation, listing, user info, wallet, deposits
@@ -49,12 +62,28 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 ### File Structure
 ```
 .
-├── public_html/bot/          # Public webhooks (cPanel deployment)
-│   ├── webhook.php          # Telegram bot webhook handler
-│   └── strowallet-webhook.php # StroWallet events webhook
-├── secrets/                  # Configuration (outside public_html)
-│   ├── .env                 # Active configuration (not in git)
-│   └── .env.example         # Configuration template
+├── database/
+│   └── migrations/          # Database schema migrations
+│       ├── 001_create_schema.sql
+│       └── 002_fix_admin_fk.sql
+├── public_html/
+│   ├── admin/              # Admin panel (NEW)
+│   │   ├── config/
+│   │   │   ├── database.php    # Database connection helpers
+│   │   │   └── session.php     # Session & auth management
+│   │   ├── includes/
+│   │   │   ├── header.php      # Shared header template
+│   │   │   └── footer.php      # Shared footer template
+│   │   ├── login.php           # Admin login page
+│   │   ├── logout.php          # Logout handler
+│   │   ├── dashboard.php       # Main dashboard
+│   │   ├── deposits.php        # Deposit approval
+│   │   ├── kyc.php             # KYC verification
+│   │   ├── settings.php        # System settings
+│   │   └── users.php           # User management (planned)
+│   └── bot/                # Public webhooks
+│       ├── webhook.php          # Telegram bot webhook handler
+│       └── strowallet-webhook.php # StroWallet events webhook
 ├── scripts/
 │   └── test_endpoints.sh    # API connectivity validator
 ├── README.md                # Deployment & troubleshooting guide
@@ -63,9 +92,10 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 ### Key Technologies
 - **Language:** PHP 8.2 (native, no frameworks)
+- **Database:** PostgreSQL (Replit/Neon)
 - **APIs:** Telegram Bot API, StroWallet API
 - **Deployment:** cPanel via webhooks (HTTPS required)
-- **Configuration:** parse_ini_file() with .env
+- **Admin Panel:** PHP with session-based authentication
 
 ### API Integration
 - **Dual API Keys:**
