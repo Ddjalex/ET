@@ -1,6 +1,6 @@
 /**
  * Premium Admin Panel - Glass Morphism Design with Clear Visibility
- * Crypto Card Bot Admin Interface - Enhanced Edition
+ * Crypto Card Bot Admin Interface - Enhanced Edition with Gold Theme
  */
 
 /* Import Google Fonts */
@@ -221,6 +221,28 @@ h4 {
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
+/* Admin Header - Dashboard Welcome Section */
+.admin-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(135deg, #C9B382 0%, #A89968 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 16px rgba(201, 179, 130, 0.3);
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.admin-main {
+    width: 100%;
+}
+
 /* Cards - Glass Morphism with Better Visibility */
 .card {
     background: var(--card-bg);
@@ -237,6 +259,27 @@ h4 {
 .card:hover {
     transform: translateY(-4px);
     box-shadow: var(--shadow-lg);
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 2px solid rgba(226, 232, 240, 0.2);
+}
+
+.card-title {
+    margin: 0;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.5rem;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(201, 179, 130, 0.5);
+}
+
+.card-body {
+    color: var(--text-secondary);
 }
 
 .card h3 {
@@ -378,14 +421,16 @@ textarea:focus {
     box-shadow: var(--shadow-md), 0 0 20px rgba(201, 179, 130, 0.4);
 }
 
-.btn-secondary {
+.btn-secondary,
+.btn-outline {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-primary);
     border: 1px solid rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(8px);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover,
+.btn-outline:hover {
     background: rgba(255, 255, 255, 0.15);
     transform: translateY(-2px);
 }
@@ -394,6 +439,12 @@ textarea:focus {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-warning {
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+    color: #78350f;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .btn-danger {
@@ -444,7 +495,11 @@ textarea:focus {
 }
 
 /* Tables - Glass Effect */
-table {
+.table-responsive {
+    overflow-x: auto;
+}
+
+table, .table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
@@ -594,5 +649,11 @@ tr:hover {
     
     .tabs {
         overflow-x: auto;
+    }
+    
+    .admin-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
     }
 }

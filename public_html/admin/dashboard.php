@@ -44,17 +44,17 @@ $recentActivities = dbFetchAll("
 
 <div class="admin-main">
     <!-- Welcome Header -->
-    <div class="admin-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%, url('data:image/svg+xml,<svg width=\"100\" height=\"100\" xmlns=\"http://www.w3.org/2000/svg\"><defs><pattern id=\"grid\" width=\"40\" height=\"40\" patternUnits=\"userSpaceOnUse\"><path d=\"M 40 0 L 0 0 0 40\" fill=\"none\" stroke=\"rgba(255,255,255,0.05)\" stroke-width=\"1\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23grid)\" /></svg>'); background-size: cover;">
+    <div class="admin-header" style="background: linear-gradient(135deg, #C9B382 0%, #A89968 100%); border-radius: 16px; padding: 2rem; margin-bottom: 2rem; box-shadow: 0 4px 16px rgba(201, 179, 130, 0.3);">
         <div class="header-title">
-            <div class="header-icon" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px);">📊</div>
+            <div class="header-icon" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 24px;">📊</div>
             <div>
-                <h1 style="color: white; margin: 0;">Dashboard</h1>
-                <p style="color: rgba(255,255,255,0.9); font-size: 0.9rem; margin: 0.25rem 0 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 2rem; font-weight: 700;">Dashboard</h1>
+                <p style="color: rgba(255,255,255,0.95); font-size: 0.95rem; margin: 0.5rem 0 0 0; font-weight: 500;">
                     Welcome back, <?php echo htmlspecialchars($currentAdmin['full_name'] ?: $currentAdmin['username']); ?>!
                 </p>
             </div>
         </div>
-        <div style="color: rgba(255,255,255,0.9); font-size: 0.85rem;">
+        <div style="color: rgba(255,255,255,0.95); font-size: 0.9rem; font-weight: 500;">
             <?php echo date('l, F j, Y'); ?> • <?php echo date('g:i A'); ?>
         </div>
     </div>
