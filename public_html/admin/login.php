@@ -59,6 +59,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             align-items: center;
             justify-content: center;
             padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            width: 900px;
+            height: 560px;
+            background-image: url('assets/virtual-card-bg.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            opacity: 0.12;
+            transform: translate(-50%, -50%) rotate(-5deg);
+            z-index: 0;
+            animation: floatCard 20s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes floatCard {
+            0%, 100% { 
+                transform: translate(-50%, -50%) rotate(-5deg) scale(1);
+                opacity: 0.12;
+            }
+            50% { 
+                transform: translate(-50%, -52%) rotate(-3deg) scale(1.02);
+                opacity: 0.18;
+            }
         }
         .login-container {
             background: white;
@@ -68,6 +97,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             width: 100%;
             max-width: 420px;
             animation: slideIn 0.4s ease-out;
+            position: relative;
+            z-index: 1;
         }
         @keyframes slideIn {
             from {
