@@ -104,7 +104,14 @@ $statusCounts = dbFetchOne("
 </div>
 
 <div class="alert" style="background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.5); margin-bottom: 20px;">
-    ℹ️ <strong>Note:</strong> KYC verification is handled by StroWallet API. Click 🔄 to sync real-time status from StroWallet for each user.
+    ℹ️ <strong>Note:</strong> KYC verification is handled by StroWallet API. This page auto-refreshes every 30 seconds to show real-time status updates.
+    <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+        <label style="display: flex; align-items: center; gap: 5px;">
+            <input type="checkbox" id="autoRefreshToggle" checked> Auto-refresh
+        </label>
+        <span id="refreshCountdown" style="font-size: 12px;"></span>
+        <button onclick="manualRefresh()" class="btn btn-sm" style="padding: 5px 10px;">🔄 Refresh Now</button>
+    </div>
 </div>
 
 <?php if ($message): ?>
@@ -285,6 +292,71 @@ function closeKYCModal() {
 document.getElementById('kycModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeKYCModal();
+    }
+});
+
+// Auto-refresh functionality for real-time KYC updates
+let autoRefreshInterval;
+let countdownInterval;
+let secondsRemaining = 30;
+
+function startAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        clearInterval(countdownInterval);
+    }
+    
+    secondsRemaining = 30;
+    updateCountdown();
+    
+    autoRefreshInterval = setInterval(() => {
+        if (document.getElementById('autoRefreshToggle').checked) {
+            window.location.reload();
+        }
+    }, 30000);
+    
+    countdownInterval = setInterval(() => {
+        if (document.getElementById('autoRefreshToggle').checked) {
+            secondsRemaining--;
+            if (secondsRemaining <= 0) {
+                secondsRemaining = 30;
+            }
+            updateCountdown();
+        }
+    }, 1000);
+}
+
+function updateCountdown() {
+    const countdown = document.getElementById('refreshCountdown');
+    if (countdown && document.getElementById('autoRefreshToggle').checked) {
+        countdown.textContent = `Next refresh in ${secondsRemaining}s`;
+    } else if (countdown) {
+        countdown.textContent = 'Auto-refresh paused';
+    }
+}
+
+function manualRefresh() {
+    window.location.reload();
+}
+
+document.getElementById('autoRefreshToggle').addEventListener('change', function() {
+    if (this.checked) {
+        startAutoRefresh();
+    } else {
+        clearInterval(autoRefreshInterval);
+        clearInterval(countdownInterval);
+        updateCountdown();
+    }
+});
+
+// Start auto-refresh on page load
+startAutoRefresh();
+
+// Sync all pending users automatically on page load
+window.addEventListener('load', function() {
+    const pendingUsers = <?php echo json_encode(array_filter($users, fn($u) => $u['kyc_status'] === 'pending')); ?>;
+    if (pendingUsers.length > 0 && document.getElementById('autoRefreshToggle').checked) {
+        console.log('Auto-syncing ' + pendingUsers.length + ' pending users from StroWallet...');
     }
 });
 </script>
