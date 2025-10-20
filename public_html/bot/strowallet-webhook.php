@@ -4,7 +4,10 @@
  * Receives deposit confirmations and other events from StroWallet
  */
 
-// Configuration - Use environment variables (Replit Secrets)
+// Load environment variables from .env file
+require_once __DIR__ . '/../../secrets/load_env.php';
+
+// Configuration - Use environment variables (Replit Secrets or .env file)
 define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
 define('ADMIN_CHAT_ID', getenv('ADMIN_CHAT_ID') ?: '');
 define('STROW_WEBHOOK_SECRET', getenv('STROW_WEBHOOK_SECRET') ?: '');

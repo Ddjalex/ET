@@ -4,13 +4,16 @@
  * PHP 8+ | No Frameworks | No Composer
  */
 
+// Load environment variables from .env file
+require_once __DIR__ . '/../../secrets/load_env.php';
+
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', '/tmp/telegram_bot_errors.log');
 
-// Configuration - Use environment variables (Replit Secrets)
+// Configuration - Use environment variables (Replit Secrets or .env file)
 define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
 define('STROW_BASE', 'https://strowallet.com/api');
 define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');

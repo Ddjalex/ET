@@ -1,6 +1,9 @@
 <?php
 // Database connection configuration for Admin Panel
-// Uses environment variables from Replit Secrets
+// Uses environment variables from Replit Secrets or .env file
+
+// Load environment variables from .env file
+require_once __DIR__ . '/../../../secrets/load_env.php';
 
 // Global database connection (singleton pattern)
 $_DB_CONNECTION = null;

@@ -176,12 +176,23 @@ A production-ready Telegram bot for managing virtual crypto cards through StroWa
 
 ## Configuration Requirements
 
-### Required Environment Variables (Replit Secrets)
+### Environment Variables Setup
+
+**✅ NEW: .env File Support Added (October 20, 2025)**
+
+Environment variables can now be configured in two ways:
+
+#### Method 1: `.env` File (Recommended for Development)
+Location: `secrets/.env`
+
+All environment variables are automatically loaded from this file. See `ENV_SETUP_GUIDE.md` for details.
+
+#### Method 2: Replit Secrets (Recommended for Production)
 ```ini
 BOT_TOKEN=              # From @BotFather
-STROW_PUBLIC_KEY=       # Public key from StroWallet API dashboard
-STROW_SECRET_KEY=       # Secret key from StroWallet API dashboard
-STROWALLET_EMAIL=       # Your StroWallet registered email
+STROW_ADMIN_KEY=        # Admin key from StroWallet API dashboard
+STROW_PERSONAL_KEY=     # Personal key from StroWallet API dashboard
+DATABASE_URL=           # Auto-configured by Replit
 ADMIN_CHAT_ID=          # For webhook alerts (optional)
 SUPPORT_URL=            # Support link (optional)
 REFERRAL_TEXT=          # Invite message (optional)
@@ -193,7 +204,10 @@ TELEGRAM_SECRET_TOKEN=  # Webhook verification
 STROW_WEBHOOK_SECRET=   # HMAC signature
 ```
 
-**Important:** All secrets are now stored in Replit Secrets (environment variables) for enhanced security. The .env file is no longer used in production.
+### Test Your Configuration
+Visit `/test_env.php` to verify all environment variables are loaded correctly.
+
+**Important:** The `.env` file is automatically loaded by all PHP components. Use it for development/testing, and Replit Secrets for production deployment.
 
 ## Deployment Notes
 
