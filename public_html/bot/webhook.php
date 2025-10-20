@@ -14,7 +14,7 @@ ini_set('log_errors', '1');
 ini_set('error_log', '/tmp/telegram_bot_errors.log');
 
 // Configuration - Use environment variables (Replit Secrets or .env file)
-define('BOT_TOKEN', getenv('BOT_TOKEN') ?: '');
+define('BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: getenv('BOT_TOKEN') ?: '');
 define('STROW_BASE', 'https://strowallet.com/api');
 define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
 define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
@@ -612,6 +612,7 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
 
 function sendMessage($chatId, $text, $showKeyboard = false) {
     $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    error_log("SendMessage URL: " . substr($url, 0, 50) . "... (token length: " . strlen(BOT_TOKEN) . ")");
     
     $payload = [
         'chat_id' => $chatId,
