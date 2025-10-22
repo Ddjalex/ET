@@ -138,6 +138,26 @@ if ($text === '/continue') {
     exit;
 }
 
+// Handle /start command - always allow restart
+if ($text === '/start' || $text === '🏠 Menu') {
+    // Reset registration state if in progress
+    if ($userState && $userState !== 'idle' && $userState !== 'completed') {
+        updateUserRegistrationState($userId, 'idle');
+    }
+    handleStart($chatId, $userId);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
+// Handle /register command - always allow restart
+if ($text === '/register') {
+    handleRegisterStart($chatId, $userId);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // If user is in registration flow (not idle), route to registration handler
 if ($userState && $userState !== 'idle' && $userState !== 'completed') {
     handleRegistrationFlow($chatId, $userId, $text, $userState, $fileId);
@@ -147,11 +167,7 @@ if ($userState && $userState !== 'idle' && $userState !== 'completed') {
 }
 
 // Route commands and button presses
-if ($text === '/start' || $text === '🏠 Menu') {
-    handleStart($chatId, $userId);
-} elseif ($text === '/register') {
-    handleRegisterStart($chatId, $userId);
-} elseif ($text === '/quickregister') {
+if ($text === '/quickregister') {
     handleQuickRegister($chatId, $userId);
 } elseif ($text === '/create_card' || $text === '➕ Create Card') {
     handleCreateCard($chatId, $userId);
@@ -959,7 +975,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                 sendMessage($chatId, "❌ Please enter a valid 2-letter country code (e.g., NG, US, UK, ET)", false);
                 return;
             }
-            updateUserField($userId, 'country', $country);
+            updateUserField($userId, 'address_country', $country);
             updateUserRegistrationState($userId, 'awaiting_id_type');
             $msg = "✅ Excellent!\n\n🆔 <b>What type of ID do you have?</b>\n\n";
             
@@ -979,7 +995,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             
             // Get user's country to validate appropriate ID types
             $userData = getUserRegistrationData($userId);
-            $userCountry = $userData['country'] ?? '';
+            $userCountry = $userData['address_country'] ?? '';
             
             $validIdTypes = [];
             if ($userCountry === 'ET') {
@@ -1140,7 +1156,7 @@ function showRegistrationReview($chatId, $userId) {
     $msg .= "• City: {$userData['city']}\n";
     $msg .= "• State: {$userData['state']}\n";
     $msg .= "• ZIP: {$userData['zip_code']}\n";
-    $msg .= "• Country: {$userData['country']}\n\n";
+    $msg .= "• Country: {$userData['address_country']}\n\n";
     
     $msg .= "🆔 <b>Identification</b>\n";
     $msg .= "• Type: {$userData['id_type']}\n";
@@ -1283,7 +1299,7 @@ function createStroWalletCustomerFromDB($userId) {
     
     // Validate required fields
     $required = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'customer_email',
-                 'house_number', 'address_line1', 'city', 'state', 'zip_code', 'country',
+                 'house_number', 'address_line1', 'city', 'state', 'zip_code', 'address_country',
                  'id_type', 'id_number', 'id_image_url', 'user_photo_url'];
     
     foreach ($required as $field) {
@@ -1308,7 +1324,7 @@ function createStroWalletCustomerFromDB($userId) {
         'state' => $userData['state'],
         'zipCode' => $userData['zip_code'],
         'city' => $userData['city'],
-        'country' => $userData['country'],
+        'country' => $userData['address_country'],
         'idType' => $userData['id_type']
     ];
     
@@ -1352,7 +1368,7 @@ function promptForCurrentField($chatId, $state, $userId = null) {
     // For ID type, show country-specific options
     if ($state === 'awaiting_id_type' && $userId) {
         $userData = getUserRegistrationData($userId);
-        $country = $userData['country'] ?? '';
+        $country = $userData['address_country'] ?? '';
         
         $prompt = "🆔 <b>What type of ID do you have?</b>\n\n";
         if ($country === 'ET') {
