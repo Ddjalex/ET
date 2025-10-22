@@ -918,7 +918,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                 sendMessage($chatId, "❌ Invalid phone number. Use international format without '+'\nExample: 2348012345678", false);
                 return;
             }
-            updateUserField($userId, 'phone_number', $phone);
+            updateUserField($userId, 'phone', $phone);
             updateUserRegistrationState($userId, 'awaiting_email');
             sendMessage($chatId, "✅ Good!\n\n📧 <b>What's your email address?</b>", false);
             break;
@@ -928,7 +928,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                 sendMessage($chatId, "❌ Invalid email address. Please enter a valid email.", false);
                 return;
             }
-            updateUserField($userId, 'customer_email', $text);
+            updateUserField($userId, 'email', $text);
             updateUserRegistrationState($userId, 'awaiting_house_number');
             sendMessage($chatId, "✅ Excellent!\n\n🏠 <b>What's your house/apartment number?</b>\nExample: 12B", false);
             break;
@@ -950,19 +950,19 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             break;
             
         case 'awaiting_city':
-            updateUserField($userId, 'city', $text);
+            updateUserField($userId, 'address_city', $text);
             updateUserRegistrationState($userId, 'awaiting_state');
             sendMessage($chatId, "✅ Great!\n\n🗺️ <b>Which state/province?</b>", false);
             break;
             
         case 'awaiting_state':
-            updateUserField($userId, 'state', $text);
+            updateUserField($userId, 'address_state', $text);
             updateUserRegistrationState($userId, 'awaiting_zip');
             sendMessage($chatId, "✅ Good!\n\n📮 <b>What's your ZIP/postal code?</b>", false);
             break;
             
         case 'awaiting_zip':
-            updateUserField($userId, 'zip_code', $text);
+            updateUserField($userId, 'address_zip', $text);
             updateUserRegistrationState($userId, 'awaiting_country');
             $msg = "✅ Perfect!\n\n🌍 <b>Country (2-letter code)?</b>\n\n";
             $msg .= "Examples: NG, US, UK, CA";
@@ -1034,11 +1034,12 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                     sendMessage($chatId, "$progress\n\n❌ Failed to process your image. Please try again or send an HTTPS URL.", false);
                     return;
                 }
+                updateUserField($userId, 'id_front_photo_url', $idImageUrl);
             } 
             // If user sent a URL, validate it
             elseif ($text && filter_var($text, FILTER_VALIDATE_URL) && preg_match('/^https:\/\//i', $text)) {
                 $idImageUrl = $text;
-                updateUserField($userId, 'id_image_url', $idImageUrl);
+                updateUserField($userId, 'id_front_photo_url', $idImageUrl);
             } 
             // Invalid input
             else {
@@ -1072,6 +1073,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                     sendMessage($chatId, "$progress\n\n❌ Failed to process your selfie. Please try again.\n\n📸 Take a selfie using your camera and send the photo.", false);
                     return;
                 }
+                updateUserField($userId, 'selfie_photo_url', $userPhotoUrl);
             }
             // Reject URL uploads for selfies (security requirement)
             else {
@@ -1241,9 +1243,9 @@ function updateUserField($userId, $field, $value) {
     $pdo = getDBConnection();
     if (!$pdo) return false;
     
-    $allowedFields = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'customer_email',
-                      'house_number', 'address_line1', 'city', 'state', 'zip_code', 'country',
-                      'id_type', 'id_number', 'id_image_url', 'user_photo_url'];
+    $allowedFields = ['first_name', 'last_name', 'date_of_birth', 'phone', 'email',
+                      'house_number', 'address_line1', 'address_city', 'address_state', 'address_zip', 'address_country',
+                      'id_type', 'id_number', 'id_front_photo_url', 'id_back_photo_url', 'selfie_photo_url'];
     
     if (!in_array($field, $allowedFields)) {
         error_log("Invalid field: $field");

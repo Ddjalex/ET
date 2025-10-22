@@ -49,12 +49,24 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
-**October 22, 2025 - Registration Review Fix**
-- **Bug Fix**: Fixed registration review message not displaying entered information
-- **Issue**: Review message was using wrong database column names (phone_number, customer_email, city, state, zip_code, id_image_url, user_photo_url)
-- **Solution**: Updated `showRegistrationReview()` to use correct schema column names (phone, email, address_city, address_state, address_zip, id_front_photo_url, selfie_photo_url)
-- **Impact**: Users can now see all their entered information in the review message before confirming registration
-- **Backward Compatibility**: Added fallbacks for legacy column names to support existing data
+**October 22, 2025 - Registration Data Saving Fix (CRITICAL)**
+- **Bug Fix**: Fixed registration flow not saving user data to database
+- **Root Cause**: The `updateUserField()` function and all registration handlers were using wrong database column names
+- **Issues Fixed**:
+  - Phone: `phone_number` → `phone` ✓
+  - Email: `customer_email` → `email` ✓
+  - City: `city` → `address_city` ✓
+  - State: `state` → `address_state` ✓
+  - ZIP: `zip_code` → `address_zip` ✓
+  - ID Image: `id_image_url` → `id_front_photo_url` ✓
+  - Selfie: Missing save call → Added `selfie_photo_url` ✓
+- **Changes Made**:
+  1. Updated `updateUserField()` allowedFields array with correct schema column names
+  2. Fixed all 7 registration case handlers to use correct column names
+  3. Added missing database save for selfie photo upload
+  4. Updated `showRegistrationReview()` with fallbacks for backward compatibility
+- **Impact**: Registration now saves ALL user data correctly and displays it properly in the review message
+- **Testing**: User registration data cleared to enable fresh testing with fixes
 
 **October 22, 2025 - Security Enhancements**
 - **Selfie Upload Security**: Removed URL upload option for selfies, now only accepts direct camera photos
