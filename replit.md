@@ -47,9 +47,17 @@ The admin panel features **premium glass-morphism design with enhanced visibilit
 ### System Design Choices
 The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
 
-### Recent Changes (October 20, 2025)
+### Recent Changes
+
+**October 22, 2025 - Security Enhancements**
+- **Selfie Upload Security**: Removed URL upload option for selfies, now only accepts direct camera photos
+- **User Messaging**: Updated all prompts to say "selfie" instead of "selfie/photo" for clarity
+- **Security Messaging**: Added clear explanations that only direct photos are accepted for security purposes
+- **Bug Fix**: Restored .env file to fix bot token access issue (bot was unable to respond after selfie upload)
+
+**October 20, 2025 - Initial Setup**
 - **Environment Setup**: Created `.env` file with admin credentials (admin/admin123) and API keys stored in Replit Secrets
-- **Database Setup**: PostgreSQL database provisioned and all migrations applied successfully (9 tables created)
+- **Database Setup**: PostgreSQL database provisioned and all migrations applied successfully (10 tables created)
 - **KYC Real-Time Updates**: Enhanced admin panel with auto-refresh (30s) for real-time KYC status monitoring
 - **Webhook Integration**: Added StroWallet webhook handlers for KYC events (kyc_updated, kyc_approved, kyc_rejected)
 - **Admin Notifications**: Telegram alerts sent to admin when KYC status changes from StroWallet
