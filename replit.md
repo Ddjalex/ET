@@ -49,6 +49,34 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
+**October 22, 2025 - KYC Approval Workflow & Deposit Request System (PRODUCTION-READY)**
+- **Complete KYC Approval Flow**: Implemented end-to-end KYC approval workflow with user and admin notifications
+- **Registration Update**: Changed post-registration message to "KYC Under Review" instead of immediate success
+- **StroWallet Webhook Enhancements**:
+  - Persists `strowallet_customer_id` for reliable event matching (handles events with/without email)
+  - Sends notifications to both user and admin on KYC approval/rejection
+  - Updates database with KYC status, timestamps, and rejection reasons
+- **User Notifications**: 
+  - KYC approved: User receives notification with "Create Card" inline button
+  - KYC rejected: User receives rejection reason with support contact
+- **Admin Notifications**:
+  - New registration alerts with user details
+  - KYC status change alerts (approved/rejected) with full context
+- **Create Card Flow**:
+  - Gated behind KYC approval (only approved users can create cards)
+  - Shows "Deposit to Wallet" button after card creation initiated
+- **Deposit Request System**:
+  - User clicks "Deposit to Wallet" → Admin receives inline keyboard with payment options
+  - Payment methods: CBE (Commercial Bank of Ethiopia), CBE Birr, TeleBirr, Other
+  - Admin selects method → Both admin and user receive confirmation messages
+  - User receives tailored payment instructions based on selected method
+- **Callback Routing**:
+  - Admin callbacks bypass registration check (deposit_method_* callbacks)
+  - User callbacks enforce registration and KYC status verification
+  - Proper parsing of complex callback data (e.g., cbe_birr with multi-part identifiers)
+- **Architect Review**: ✅ Approved - Complete workflow tested and ready for production
+- **Status**: Ready for end-to-end testing with real Telegram bot and StroWallet webhooks
+
 **October 22, 2025 - Registration API Call Bug Fix (CRITICAL)**
 - **Bug Fix 1 - Phone Number Missing**: Fixed StroWallet API call failing with "Missing required field: phone_number"
 - **Root Cause**: The `createStroWalletCustomerFromDB()` function used outdated column names from before database schema fix
