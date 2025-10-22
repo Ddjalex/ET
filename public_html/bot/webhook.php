@@ -229,11 +229,15 @@ function handleCallbackQuery($callbackQuery) {
     // Route based on callback data
     if ($data === 'create_card') {
         if ($kycStatus !== 'approved') {
-            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", true);
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", false);
             return;
         }
         handleCreateCardCallback($chatId, $userId);
     } elseif ($data === 'deposit_wallet') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval before requesting deposits.", false);
+            return;
+        }
         requestAdminDeposit($chatId, $userId);
     }
 }
@@ -498,9 +502,19 @@ function handleRegisterStart($chatId, $userId) {
     // Check if already registered
     $userData = getUserRegistrationData($userId);
     if ($userData && $userData['is_registered']) {
+        $kycStatus = $userData['kyc_status'] ?? 'pending';
         $msg = "✅ <b>Already Registered!</b>\n\n";
-        $msg .= "You're all set! You can now create cards using ➕ <b>Create Card</b>";
-        sendMessage($chatId, $msg, true);
+        
+        if ($kycStatus === 'approved') {
+            $msg .= "You're all set! You can now create cards using ➕ <b>Create Card</b>";
+            sendMessage($chatId, $msg, true);
+        } elseif ($kycStatus === 'rejected') {
+            $msg .= "⚠️ Your KYC verification was rejected. Please contact support.";
+            sendMessage($chatId, $msg, false);
+        } else {
+            $msg .= "⏳ Your KYC is under review. You'll be notified once approved.";
+            sendMessage($chatId, $msg, false);
+        }
         return;
     }
     
@@ -511,7 +525,7 @@ function handleRegisterStart($chatId, $userId) {
         $msg .= "Choose an option:\n";
         $msg .= "• Send /continue to resume\n";
         $msg .= "• Send /cancel to start over";
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, false);
         return;
     }
     
@@ -1531,10 +1545,11 @@ function initializeUserRegistration($userId, $chatId) {
     
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO user_registrations (telegram_user_id, registration_state)
-            VALUES (?, 'idle')
+            INSERT INTO user_registrations (telegram_user_id, registration_state, kyc_status)
+            VALUES (?, 'idle', 'pending')
             ON CONFLICT (telegram_user_id) DO UPDATE SET 
                 registration_state = 'idle',
+                kyc_status = COALESCE(user_registrations.kyc_status, 'pending'),
                 updated_at = CURRENT_TIMESTAMP
         ");
         return $stmt->execute([$userId]);
