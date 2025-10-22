@@ -49,6 +49,27 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
+**October 22, 2025 - KYC Enforcement Fix (CRITICAL SECURITY)**
+- **Issue**: Users were receiving menu buttons immediately after registration, even with KYC pending
+- **Root Cause**: Bot didn't check KYC status before showing menu buttons or allowing command execution
+- **Fixes Applied**:
+  - Changed registration success message from "Registration Successful!" to "KYC Under Review"
+  - Removed keyboard buttons from being shown until KYC is approved
+  - Added comprehensive logging to `createStroWalletCustomerFromDB()` for debugging
+  - Applied migration 006 to add `kyc_status` and `strowallet_customer_id` columns
+  - Created `checkKYCStatus()` helper function for consistent KYC verification
+  - Added KYC checks to ALL command handlers: `/start`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`
+  - Fixed `handleRegisterStart` to check KYC before showing keyboard
+  - Added KYC checks to callback handlers (`create_card`, `deposit_wallet`)
+  - Updated `initializeUserRegistration` to set `kyc_status='pending'` for new users
+- **User Experience**:
+  - Users with pending KYC see: "⏳ KYC Under Review" message with no menu buttons
+  - Users with approved KYC see: Full menu with all buttons
+  - Users with rejected KYC see: Error message with support contact
+- **Security**: All protected commands now properly gate-checked behind KYC approval
+- **Architect Review**: ✅ Passed - All KYC enforcement points verified secure
+- **Status**: PRODUCTION-READY - Registration now correctly prevents unauthorized access
+
 **October 22, 2025 - KYC Approval Workflow & Deposit Request System (PRODUCTION-READY)**
 - **Complete KYC Approval Flow**: Implemented end-to-end KYC approval workflow with user and admin notifications
 - **Registration Update**: Changed post-registration message to "KYC Under Review" instead of immediate success
