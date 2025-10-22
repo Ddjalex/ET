@@ -49,6 +49,26 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
+**October 22, 2025 - Registration API Call Bug Fix (CRITICAL)**
+- **Bug Fix 1 - Phone Number Missing**: Fixed StroWallet API call failing with "Missing required field: phone_number"
+- **Root Cause**: The `createStroWalletCustomerFromDB()` function used outdated column names from before database schema fix
+- **Issues Fixed**:
+  - API validation: `phone_number` → `phone` ✓
+  - API validation: `customer_email` → `email` ✓
+  - API validation: `city` → `address_city` ✓
+  - API validation: `state` → `address_state` ✓
+  - API validation: `zip_code` → `address_zip` ✓
+  - API payload: All fields updated to use correct database column names ✓
+  - Photo URLs: Added backward compatibility for both old and new field names ✓
+- **Bug Fix 2 - ID Type Selection UX**: Changed from text names to numbered selection (1, 2, 3)
+- **UX Improvements**:
+  - Users now select ID type by number instead of typing "GOVERNMENT_ID", "PASSPORT", etc.
+  - Bot confirms selected ID type with formatted name (e.g., "Government Id")
+  - Country-specific options maintained (ET: National ID/Government ID/Passport, NG: BVN/NIN/Passport)
+  - Invalid selections show clear error message requesting 1, 2, or 3
+- **Impact**: Registration flow now completes successfully with all required fields sent to StroWallet API
+- **Architect Review**: ✅ Passed - All field mappings correct, no regressions found
+
 **October 22, 2025 - Registration Data Saving Fix (CRITICAL)**
 - **Bug Fix**: Fixed registration flow not saving user data to database
 - **Root Cause**: The `updateUserField()` function and all registration handlers were using wrong database column names
