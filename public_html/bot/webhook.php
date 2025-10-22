@@ -979,40 +979,69 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             updateUserRegistrationState($userId, 'awaiting_id_type');
             $msg = "✅ Excellent!\n\n🆔 <b>What type of ID do you have?</b>\n\n";
             
-            // Show country-specific ID options
+            // Show country-specific ID options with numbers
             if ($country === 'ET') {
-                $msg .= "Options:\n• NATIONAL_ID\n• GOVERNMENT_ID\n• PASSPORT";
+                $msg .= "Reply with the number:\n\n1️⃣ National ID\n2️⃣ Government ID\n3️⃣ Passport";
             } elseif ($country === 'NG') {
-                $msg .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+                $msg .= "Reply with the number:\n\n1️⃣ BVN\n2️⃣ NIN\n3️⃣ Passport";
             } else {
-                $msg .= "Options:\n• NATIONAL_ID\n• DRIVER_LICENSE\n• PASSPORT";
+                $msg .= "Reply with the number:\n\n1️⃣ National ID\n2️⃣ Driver License\n3️⃣ Passport";
             }
             sendMessage($chatId, $msg, false);
             break;
             
         case 'awaiting_id_type':
-            $idType = strtoupper(str_replace(' ', '_', $text));
-            
-            // Get user's country to validate appropriate ID types
+            // Get user's country to determine ID type options
             $userData = getUserRegistrationData($userId);
             $userCountry = $userData['address_country'] ?? '';
             
-            $validIdTypes = [];
+            // Map numbers to ID types based on country
+            $idTypeMap = [];
             if ($userCountry === 'ET') {
-                $validIdTypes = ['NATIONAL_ID', 'GOVERNMENT_ID', 'PASSPORT'];
+                $idTypeMap = [
+                    '1' => 'NATIONAL_ID',
+                    '2' => 'GOVERNMENT_ID',
+                    '3' => 'PASSPORT'
+                ];
             } elseif ($userCountry === 'NG') {
-                $validIdTypes = ['BVN', 'NIN', 'PASSPORT'];
+                $idTypeMap = [
+                    '1' => 'BVN',
+                    '2' => 'NIN',
+                    '3' => 'PASSPORT'
+                ];
             } else {
-                $validIdTypes = ['NATIONAL_ID', 'DRIVER_LICENSE', 'PASSPORT'];
+                $idTypeMap = [
+                    '1' => 'NATIONAL_ID',
+                    '2' => 'DRIVER_LICENSE',
+                    '3' => 'PASSPORT'
+                ];
             }
+            
+            // Check if user entered a valid number
+            $selectedNumber = trim($text);
+            if (!isset($idTypeMap[$selectedNumber])) {
+                $msg = "❌ Invalid selection. Please reply with 1, 2, or 3.";
+                sendMessage($chatId, $msg, false);
+                break;
+            }
+            
+            // Get the ID type name from the number
+            $idType = $idTypeMap[$selectedNumber];
+            
+            // Keep valid ID types array for backward compatibility
+            $validIdTypes = array_values($idTypeMap);
             
             if (!in_array($idType, $validIdTypes)) {
                 sendMessage($chatId, "❌ Invalid ID type for your country. Choose from: " . implode(', ', $validIdTypes), false);
                 return;
             }
+            
+            // Format ID type name for display (replace underscores with spaces, title case)
+            $idTypeDisplay = ucwords(str_replace('_', ' ', strtolower($idType)));
+            
             updateUserField($userId, 'id_type', $idType);
             updateUserRegistrationState($userId, 'awaiting_id_number');
-            sendMessage($chatId, "✅ Got it!\n\n🔢 <b>What's your ID number?</b>", false);
+            sendMessage($chatId, "✅ Got it! You selected: <b>$idTypeDisplay</b>\n\n🔢 <b>What's your ID number?</b>", false);
             break;
             
         case 'awaiting_id_number':
@@ -1293,10 +1322,10 @@ function createStroWalletCustomerFromDB($userId) {
         return ['error' => 'User data not found'];
     }
     
-    // Validate required fields
-    $required = ['first_name', 'last_name', 'date_of_birth', 'phone_number', 'customer_email',
-                 'house_number', 'address_line1', 'city', 'state', 'zip_code', 'address_country',
-                 'id_type', 'id_number', 'id_image_url', 'user_photo_url'];
+    // Validate required fields (using correct database column names)
+    $required = ['first_name', 'last_name', 'date_of_birth', 'phone', 'email',
+                 'house_number', 'address_line1', 'address_city', 'address_state', 'address_zip', 'address_country',
+                 'id_type', 'id_number'];
     
     foreach ($required as $field) {
         if (empty($userData[$field])) {
@@ -1304,22 +1333,34 @@ function createStroWalletCustomerFromDB($userId) {
         }
     }
     
-    // Prepare customer data for StroWallet API
+    // Get photo URLs (support both old and new field names for backward compatibility)
+    $idImageUrl = $userData['id_front_photo_url'] ?? $userData['id_image_url'] ?? '';
+    $userPhotoUrl = $userData['selfie_photo_url'] ?? $userData['user_photo_url'] ?? '';
+    
+    // Validate photos are present
+    if (empty($idImageUrl)) {
+        return ['error' => 'Missing required field: id_image'];
+    }
+    if (empty($userPhotoUrl)) {
+        return ['error' => 'Missing required field: user_photo'];
+    }
+    
+    // Prepare customer data for StroWallet API (using correct database column names)
     $customerData = [
         'public_key' => STROW_PUBLIC_KEY,
         'houseNumber' => $userData['house_number'],
         'firstName' => $userData['first_name'],
         'lastName' => $userData['last_name'],
         'idNumber' => $userData['id_number'],
-        'customerEmail' => $userData['customer_email'],
-        'phoneNumber' => $userData['phone_number'],
+        'customerEmail' => $userData['email'],
+        'phoneNumber' => $userData['phone'],
         'dateOfBirth' => $userData['date_of_birth'],
-        'idImage' => $userData['id_image_url'],
-        'userPhoto' => $userData['user_photo_url'],
+        'idImage' => $idImageUrl,
+        'userPhoto' => $userPhotoUrl,
         'line1' => $userData['address_line1'],
-        'state' => $userData['state'],
-        'zipCode' => $userData['zip_code'],
-        'city' => $userData['city'],
+        'state' => $userData['address_state'],
+        'zipCode' => $userData['address_zip'],
+        'city' => $userData['address_city'],
         'country' => $userData['address_country'],
         'idType' => $userData['id_type']
     ];
@@ -1361,18 +1402,19 @@ function promptForCurrentField($chatId, $state, $userId = null) {
     
     $prompt = $prompts[$state] ?? "Please provide the requested information.";
     
-    // For ID type, show country-specific options
+    // For ID type, show country-specific options with numbers
     if ($state === 'awaiting_id_type' && $userId) {
         $userData = getUserRegistrationData($userId);
         $country = $userData['address_country'] ?? '';
         
         $prompt = "🆔 <b>What type of ID do you have?</b>\n\n";
+        $prompt .= "Reply with the number:\n\n";
         if ($country === 'ET') {
-            $prompt .= "Options:\n• NATIONAL_ID\n• GOVERNMENT_ID\n• PASSPORT";
+            $prompt .= "1️⃣ National ID\n2️⃣ Government ID\n3️⃣ Passport";
         } elseif ($country === 'NG') {
-            $prompt .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+            $prompt .= "1️⃣ BVN\n2️⃣ NIN\n3️⃣ Passport";
         } else {
-            $prompt .= "Options:\n• NATIONAL_ID\n• DRIVER_LICENSE\n• PASSPORT";
+            $prompt .= "1️⃣ National ID\n2️⃣ Driver License\n3️⃣ Passport";
         }
     }
     
