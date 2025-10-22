@@ -1056,38 +1056,29 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             
             $msg = "$progress\n\n";
             $msg .= "✅ ID image received!\n\n";
-            $msg .= "🤳 <b>Now upload your selfie/photo</b>\n\n";
-            $msg .= "💡 You can:\n";
-            $msg .= "• Send a photo directly from your device\n";
-            $msg .= "• Send a document file\n";
-            $msg .= "• Or paste an HTTPS URL";
+            $msg .= "🤳 <b>Now upload your selfie</b>\n\n";
+            $msg .= "📸 <b>Please take a selfie photo using your camera and send it directly.</b>\n\n";
+            $msg .= "🔒 <i>For security, only direct photos are accepted.</i>";
             sendMessage($chatId, $msg, false);
             break;
             
         case 'awaiting_user_photo':
             $userPhotoUrl = null;
             
-            // If user uploaded a file (photo/document), download it securely
+            // Only accept direct photo/document uploads for security (no URLs)
             if ($fileId) {
                 $userPhotoUrl = downloadAndStoreTelegramFile($fileId, $userId, 'user_photo');
                 if (!$userPhotoUrl) {
-                    sendMessage($chatId, "$progress\n\n❌ Failed to process your photo. Please try again or send an HTTPS URL.", false);
+                    sendMessage($chatId, "$progress\n\n❌ Failed to process your selfie. Please try again.\n\n📸 Take a selfie using your camera and send the photo.", false);
                     return;
                 }
             }
-            // If user sent a URL, validate it
-            elseif ($text && filter_var($text, FILTER_VALIDATE_URL) && preg_match('/^https:\/\//i', $text)) {
-                $userPhotoUrl = $text;
-                updateUserField($userId, 'user_photo_url', $userPhotoUrl);
-            }
-            // Invalid input
+            // Reject URL uploads for selfies (security requirement)
             else {
                 $msg = "$progress\n\n";
-                $msg .= "❌ Please upload your photo or send a valid HTTPS URL.\n\n";
-                $msg .= "💡 You can:\n";
-                $msg .= "• Send a photo directly from your device\n";
-                $msg .= "• Send a document file\n";
-                $msg .= "• Or paste an HTTPS URL";
+                $msg .= "❌ <b>Please upload a selfie photo directly</b>\n\n";
+                $msg .= "📸 Use your camera to take a selfie and send it.\n\n";
+                $msg .= "🔒 <i>For security purposes, URL links are not accepted for selfies.</i>";
                 sendMessage($chatId, $msg, false);
                 return;
             }
@@ -1360,7 +1351,7 @@ function promptForCurrentField($chatId, $state, $userId = null) {
         'awaiting_country' => "🌍 <b>Country (2-letter code)?</b>\n\nExamples: NG, US, UK, ET, CA",
         'awaiting_id_number' => "🔢 <b>What's your ID number?</b>",
         'awaiting_id_image' => "📸 <b>Upload your ID document image</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL",
-        'awaiting_user_photo' => "🤳 <b>Upload your selfie/photo</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL"
+        'awaiting_user_photo' => "🤳 <b>Upload your selfie</b>\n\n📸 Please take a selfie photo using your camera and send it directly.\n\n🔒 <i>For security, only direct photos are accepted.</i>"
     ];
     
     $prompt = $prompts[$state] ?? "Please provide the requested information.";
