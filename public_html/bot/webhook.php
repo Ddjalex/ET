@@ -416,6 +416,33 @@ function requestAdminDeposit($chatId, $userId) {
 
 // ==================== COMMAND HANDLERS ====================
 
+function checkKYCStatus($chatId, $userId) {
+    $userData = getUserRegistrationData($userId);
+    
+    if (!$userData || !$userData['is_registered']) {
+        sendMessage($chatId, "❌ Please register first using /register", false);
+        return false;
+    }
+    
+    $kycStatus = $userData['kyc_status'] ?? 'pending';
+    
+    if ($kycStatus === 'rejected') {
+        sendMessage($chatId, "❌ <b>KYC Verification Failed</b>\n\nYour KYC was rejected. Please contact support.", false);
+        return false;
+    }
+    
+    if ($kycStatus !== 'approved') {
+        $msg = "⏳ <b>KYC Under Review</b>\n\n";
+        $msg .= "Your registration is being verified.\n\n";
+        $msg .= "🔔 You'll be notified once approved.\n\n";
+        $msg .= "⏱️ <i>This usually takes a few hours.</i>";
+        sendMessage($chatId, $msg, false);
+        return false;
+    }
+    
+    return true;
+}
+
 function handleStart($chatId, $userId = null) {
     // Check if user is registered
     $userData = getUserRegistrationData($userId);
@@ -439,12 +466,31 @@ function handleStart($chatId, $userId = null) {
         
         sendMessage($chatId, $welcomeMsg, false);
     } else {
-        // Registered user - show normal welcome
-        $welcomeMsg = "🎉 <b>Welcome Back!</b>\n\n";
-        $welcomeMsg .= "🚀 Manage your virtual cards and crypto wallet with ease.\n\n";
-        $welcomeMsg .= "📱 Use the menu below to get started:";
+        // Registered user - check KYC status
+        $kycStatus = $userData['kyc_status'] ?? 'pending';
         
-        sendMessage($chatId, $welcomeMsg, true);
+        if ($kycStatus === 'approved') {
+            // KYC approved - show full menu
+            $welcomeMsg = "🎉 <b>Welcome Back!</b>\n\n";
+            $welcomeMsg .= "🚀 Manage your virtual cards and crypto wallet with ease.\n\n";
+            $welcomeMsg .= "📱 Use the menu below to get started:";
+            sendMessage($chatId, $welcomeMsg, true);
+        } elseif ($kycStatus === 'rejected') {
+            // KYC rejected
+            $welcomeMsg = "❌ <b>KYC Verification Failed</b>\n\n";
+            $welcomeMsg .= "Your KYC verification was rejected.\n\n";
+            $welcomeMsg .= "Please contact support for assistance.";
+            sendMessage($chatId, $welcomeMsg, false);
+        } else {
+            // KYC pending
+            $welcomeMsg = "⏳ <b>KYC Under Review</b>\n\n";
+            $welcomeMsg .= "Your registration is being verified by StroWallet.\n\n";
+            $welcomeMsg .= "🔔 You will be notified once approved.\n\n";
+            $welcomeMsg .= "⏱️ <i>This usually takes a few hours.</i>\n\n";
+            $welcomeMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+            $welcomeMsg .= "🚫 Menu buttons will be available after approval.";
+            sendMessage($chatId, $welcomeMsg, false);
+        }
     }
 }
 
@@ -491,20 +537,17 @@ function handleRegisterStart($chatId, $userId) {
 function handleCreateCard($chatId, $userId) {
     sendTypingAction($chatId);
     
-    // Check if user is registered in database
-    $userData = getUserRegistrationData($userId);
-    $customerEmail = null;
-    
-    if ($userData && $userData['is_registered']) {
-        // Use email from user's registration
-        $customerEmail = $userData['customer_email'];
-    } else {
-        // Fallback to configured email from secrets
-        $customerEmail = STROWALLET_EMAIL;
+    // Check KYC status before allowing card creation
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
     }
     
+    // Get user registration data
+    $userData = getUserRegistrationData($userId);
+    $customerEmail = $userData['email'] ?? null;
+    
     if (empty($customerEmail)) {
-        sendMessage($chatId, "❌ <b>Configuration Error</b>\n\nSTROWALLET_EMAIL is not configured. Please contact administrator.", true);
+        sendMessage($chatId, "❌ <b>Configuration Error</b>\n\nEmail not found. Please contact administrator.", false);
         return;
     }
     
@@ -598,6 +641,11 @@ function handleCreateCard($chatId, $userId) {
 function handleMyCards($chatId, $userId) {
     sendTypingAction($chatId);
     
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
+    
     $result = callStroWalletAPI('/bitvcard/fetch-card-detail/', 'GET', [], true);
     
     if (isset($result['error'])) {
@@ -635,6 +683,11 @@ function handleMyCards($chatId, $userId) {
 
 function handleUserInfo($chatId, $userId) {
     sendTypingAction($chatId);
+    
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
     
     $result = callStroWalletAPI('/user/profile', 'GET', [], false);
     
@@ -684,6 +737,11 @@ function handleUserInfo($chatId, $userId) {
 function handleWallet($chatId, $userId) {
     sendTypingAction($chatId);
     
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
+    
     $result = callStroWalletAPI('/wallet/balance', 'GET', [], false);
     
     if (isset($result['error'])) {
@@ -715,6 +773,11 @@ function handleWallet($chatId, $userId) {
 
 function handleDepositTRC20($chatId, $userId) {
     sendTypingAction($chatId);
+    
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
     
     $result = callStroWalletAPI('/wallet/deposit-address', 'POST', ['currency' => 'USDT', 'network' => 'TRC20'], false);
     
