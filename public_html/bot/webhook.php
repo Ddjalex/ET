@@ -1203,14 +1203,13 @@ function initializeUserRegistration($userId, $chatId) {
     
     try {
         $stmt = $pdo->prepare("
-            INSERT INTO user_registrations (telegram_user_id, telegram_chat_id, registration_state)
-            VALUES (?, ?, 'idle')
+            INSERT INTO user_registrations (telegram_user_id, registration_state)
+            VALUES (?, 'idle')
             ON CONFLICT (telegram_user_id) DO UPDATE SET 
-                telegram_chat_id = EXCLUDED.telegram_chat_id,
                 registration_state = 'idle',
                 updated_at = CURRENT_TIMESTAMP
         ");
-        return $stmt->execute([$userId, $chatId]);
+        return $stmt->execute([$userId]);
     } catch (PDOException $e) {
         error_log("Error initializing registration: " . $e->getMessage());
         return false;
