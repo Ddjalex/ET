@@ -129,7 +129,7 @@ if ($text === '/cancel') {
 if ($text === '/continue') {
     if ($userState && $userState !== 'idle' && $userState !== 'completed') {
         // Re-prompt for the current field
-        promptForCurrentField($chatId, $userState);
+        promptForCurrentField($chatId, $userState, $userId);
     } else {
         sendMessage($chatId, "Nothing to continue. Use /register to start.", true);
     }
@@ -956,20 +956,42 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
         case 'awaiting_country':
             $country = strtoupper(substr($text, 0, 2));
             if (strlen($country) !== 2) {
-                sendMessage($chatId, "❌ Please enter a valid 2-letter country code (e.g., NG, US, UK)", false);
+                sendMessage($chatId, "❌ Please enter a valid 2-letter country code (e.g., NG, US, UK, ET)", false);
                 return;
             }
             updateUserField($userId, 'country', $country);
             updateUserRegistrationState($userId, 'awaiting_id_type');
             $msg = "✅ Excellent!\n\n🆔 <b>What type of ID do you have?</b>\n\n";
-            $msg .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+            
+            // Show country-specific ID options
+            if ($country === 'ET') {
+                $msg .= "Options:\n• NATIONAL_ID\n• GOVERNMENT_ID\n• PASSPORT";
+            } elseif ($country === 'NG') {
+                $msg .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+            } else {
+                $msg .= "Options:\n• NATIONAL_ID\n• DRIVER_LICENSE\n• PASSPORT";
+            }
             sendMessage($chatId, $msg, false);
             break;
             
         case 'awaiting_id_type':
-            $idType = strtoupper($text);
-            if (!in_array($idType, ['BVN', 'NIN', 'PASSPORT'])) {
-                sendMessage($chatId, "❌ Invalid ID type. Choose: BVN, NIN, or PASSPORT", false);
+            $idType = strtoupper(str_replace(' ', '_', $text));
+            
+            // Get user's country to validate appropriate ID types
+            $userData = getUserRegistrationData($userId);
+            $userCountry = $userData['country'] ?? '';
+            
+            $validIdTypes = [];
+            if ($userCountry === 'ET') {
+                $validIdTypes = ['NATIONAL_ID', 'GOVERNMENT_ID', 'PASSPORT'];
+            } elseif ($userCountry === 'NG') {
+                $validIdTypes = ['BVN', 'NIN', 'PASSPORT'];
+            } else {
+                $validIdTypes = ['NATIONAL_ID', 'DRIVER_LICENSE', 'PASSPORT'];
+            }
+            
+            if (!in_array($idType, $validIdTypes)) {
+                sendMessage($chatId, "❌ Invalid ID type for your country. Choose from: " . implode(', ', $validIdTypes), false);
                 return;
             }
             updateUserField($userId, 'id_type', $idType);
@@ -1307,7 +1329,7 @@ function validateDateFormat($date) {
     return checkdate((int)$parts[0], (int)$parts[1], (int)$parts[2]);
 }
 
-function promptForCurrentField($chatId, $state) {
+function promptForCurrentField($chatId, $state, $userId = null) {
     $prompts = [
         'awaiting_first_name' => "👤 <b>What's your first name?</b>",
         'awaiting_last_name' => "👤 <b>What's your last name?</b>",
@@ -1319,14 +1341,29 @@ function promptForCurrentField($chatId, $state) {
         'awaiting_city' => "🏙️ <b>Which city do you live in?</b>",
         'awaiting_state' => "🗺️ <b>Which state/province?</b>",
         'awaiting_zip' => "📮 <b>What's your ZIP/postal code?</b>",
-        'awaiting_country' => "🌍 <b>Country (2-letter code)?</b>\n\nExamples: NG, US, UK, CA",
-        'awaiting_id_type' => "🆔 <b>What type of ID do you have?</b>\n\nOptions:\n• BVN\n• NIN\n• PASSPORT",
+        'awaiting_country' => "🌍 <b>Country (2-letter code)?</b>\n\nExamples: NG, US, UK, ET, CA",
         'awaiting_id_number' => "🔢 <b>What's your ID number?</b>",
         'awaiting_id_image' => "📸 <b>Upload your ID document image</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL",
         'awaiting_user_photo' => "🤳 <b>Upload your selfie/photo</b>\n\n💡 You can:\n• Send a photo directly from your device\n• Send a document file\n• Or paste an HTTPS URL"
     ];
     
     $prompt = $prompts[$state] ?? "Please provide the requested information.";
+    
+    // For ID type, show country-specific options
+    if ($state === 'awaiting_id_type' && $userId) {
+        $userData = getUserRegistrationData($userId);
+        $country = $userData['country'] ?? '';
+        
+        $prompt = "🆔 <b>What type of ID do you have?</b>\n\n";
+        if ($country === 'ET') {
+            $prompt .= "Options:\n• NATIONAL_ID\n• GOVERNMENT_ID\n• PASSPORT";
+        } elseif ($country === 'NG') {
+            $prompt .= "Options:\n• BVN\n• NIN\n• PASSPORT";
+        } else {
+            $prompt .= "Options:\n• NATIONAL_ID\n• DRIVER_LICENSE\n• PASSPORT";
+        }
+    }
+    
     sendMessage($chatId, "↩️ <b>Continuing registration...</b>\n\n" . $prompt, false);
 }
 
