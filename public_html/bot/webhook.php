@@ -1356,18 +1356,19 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                     $msg = "❌ <b>Registration Failed</b>\n\n";
                     $msg .= "Error: " . $result['error'] . "\n\n";
                     $msg .= "Please check your information and try /register again.";
-                    sendMessage($chatId, $msg, true);
+                    sendMessage($chatId, $msg, false);
                 } else {
                     // Mark as completed with KYC pending
                     markUserRegistrationComplete($userId, $result['customer_id'] ?? '', 'pending');
                     
-                    $msg = "✅ <b>Registration Successful!</b>\n\n";
-                    $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
-                    $msg .= "⏳ <b>KYC Status: Under Review</b>\n\n";
-                    $msg .= "📋 Your documents are being verified by StroWallet.\n\n";
+                    $msg = "⏳ <b>KYC Under Review</b>\n\n";
+                    $msg .= "✅ Your registration has been submitted to StroWallet.\n\n";
+                    $msg .= "📋 Your documents are being verified.\n\n";
                     $msg .= "🔔 You will be notified once your KYC is approved.\n\n";
-                    $msg .= "⏱️ <i>This usually takes a few hours.</i>";
-                    sendMessage($chatId, $msg, true);
+                    $msg .= "⏱️ <i>This usually takes a few hours.</i>\n\n";
+                    $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n\n";
+                    $msg .= "🚫 Menu buttons will be available after KYC approval.";
+                    sendMessage($chatId, $msg, false);
                     
                     // Notify admin about new registration
                     notifyAdminNewRegistration($userId, $userData['first_name'] ?? '', $userData['last_name'] ?? '');
@@ -1561,11 +1562,15 @@ function notifyAdminNewRegistration($userId, $firstName, $lastName) {
 }
 
 function createStroWalletCustomerFromDB($userId) {
+    error_log("=== createStroWalletCustomerFromDB START for user $userId ===");
     $userData = getUserRegistrationData($userId);
     
     if (!$userData) {
+        error_log("ERROR: User data not found for user $userId");
         return ['error' => 'User data not found'];
     }
+    
+    error_log("User data retrieved: " . json_encode(array_keys($userData)));
     
     // Validate required fields (using correct database column names)
     $required = ['first_name', 'last_name', 'date_of_birth', 'phone', 'email',
@@ -1574,6 +1579,7 @@ function createStroWalletCustomerFromDB($userId) {
     
     foreach ($required as $field) {
         if (empty($userData[$field])) {
+            error_log("ERROR: Missing required field: $field");
             return ['error' => "Missing required field: $field"];
         }
     }
@@ -1584,11 +1590,15 @@ function createStroWalletCustomerFromDB($userId) {
     
     // Validate photos are present
     if (empty($idImageUrl)) {
+        error_log("ERROR: Missing ID image");
         return ['error' => 'Missing required field: id_image'];
     }
     if (empty($userPhotoUrl)) {
+        error_log("ERROR: Missing user photo");
         return ['error' => 'Missing required field: user_photo'];
     }
+    
+    error_log("All required fields validated successfully");
     
     // Prepare customer data for StroWallet API (using correct database column names)
     $customerData = [
@@ -1610,8 +1620,25 @@ function createStroWalletCustomerFromDB($userId) {
         'idType' => $userData['id_type']
     ];
     
+    error_log("Calling StroWallet API with data: " . json_encode([
+        'endpoint' => '/bitvcard/create-user/',
+        'email' => $customerData['customerEmail'],
+        'phone' => $customerData['phoneNumber'],
+        'name' => $customerData['firstName'] . ' ' . $customerData['lastName']
+    ]));
+    
     // Call StroWallet create-user API
-    return callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
+    $result = callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
+    
+    if (isset($result['error'])) {
+        error_log("ERROR: StroWallet API call failed: " . $result['error']);
+    } else {
+        error_log("SUCCESS: StroWallet API call succeeded - Customer ID: " . ($result['customer_id'] ?? 'N/A'));
+    }
+    
+    error_log("=== createStroWalletCustomerFromDB END ===");
+    
+    return $result;
 }
 
 // ==================== VALIDATION FUNCTIONS ====================
