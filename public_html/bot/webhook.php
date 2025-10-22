@@ -75,6 +75,15 @@ if (!$update) {
     die('Invalid JSON');
 }
 
+// Handle callback queries (inline button clicks)
+$callbackQuery = $update['callback_query'] ?? null;
+if ($callbackQuery) {
+    handleCallbackQuery($callbackQuery);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // Extract message data
 $message = $update['message'] ?? null;
 $chatId = $message['chat']['id'] ?? null;
@@ -190,6 +199,220 @@ if ($text === '/quickregister') {
 http_response_code(200);
 echo 'OK';
 exit;
+
+// ==================== CALLBACK QUERY HANDLER ====================
+
+function handleCallbackQuery($callbackQuery) {
+    $callbackId = $callbackQuery['id'] ?? null;
+    $chatId = $callbackQuery['message']['chat']['id'] ?? null;
+    $userId = $callbackQuery['from']['id'] ?? null;
+    $data = $callbackQuery['data'] ?? '';
+    
+    // Answer the callback to remove loading state
+    answerCallbackQuery($callbackId);
+    
+    // Handle admin callbacks (payment method selection) - no registration check needed
+    if (strpos($data, 'deposit_method_') === 0) {
+        handleAdminDepositMethodSelection($chatId, $userId, $data);
+        return;
+    }
+    
+    // For user callbacks, check registration status
+    $userData = getUserRegistrationData($userId);
+    if (!$userData) {
+        sendMessage($chatId, "❌ Please register first using /register", true);
+        return;
+    }
+    
+    $kycStatus = $userData['kyc_status'] ?? 'pending';
+    
+    // Route based on callback data
+    if ($data === 'create_card') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", true);
+            return;
+        }
+        handleCreateCardCallback($chatId, $userId);
+    } elseif ($data === 'deposit_wallet') {
+        requestAdminDeposit($chatId, $userId);
+    }
+}
+
+function handleAdminDepositMethodSelection($chatId, $userId, $callbackData) {
+    // Parse callback data: deposit_method_{method}_{targetUserId}
+    $parts = explode('_', $callbackData);
+    if (count($parts) < 4) {
+        return;
+    }
+    
+    // Get method and target user ID
+    $method = $parts[2]; // cbe, birr, telebirr, other
+    $targetUserId = $parts[3];
+    
+    // Fix the cbe_birr parsing first
+    if ($method === 'cbe' && isset($parts[3]) && $parts[3] === 'birr') {
+        $method = 'cbe_birr';
+        $targetUserId = $parts[4] ?? null;
+        if (!$targetUserId) {
+            sendMessage($chatId, "❌ Invalid callback data.", false);
+            return;
+        }
+    }
+    
+    // Map method codes to display names
+    $methodNames = [
+        'cbe' => 'CBE (Commercial Bank of Ethiopia)',
+        'cbe_birr' => 'CBE Birr',
+        'telebirr' => 'TeleBirr',
+        'other' => 'Other Payment Method'
+    ];
+    
+    $methodName = $methodNames[$method] ?? ucfirst(str_replace('_', ' ', $method));
+    
+    // Get user info
+    $userData = getUserRegistrationData($targetUserId);
+    if (!$userData) {
+        sendMessage($chatId, "❌ User not found.", false);
+        return;
+    }
+    
+    $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
+    
+    // Send confirmation to admin
+    $adminMsg = "✅ <b>Payment Method Selected</b>\n\n";
+    $adminMsg .= "💳 <b>Method:</b> {$methodName}\n";
+    $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
+    $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$targetUserId}</code>\n\n";
+    $adminMsg .= "📝 <b>Next:</b> Please provide payment instructions to the user.";
+    sendMessage($chatId, $adminMsg, false);
+    
+    // Send payment instructions to user
+    $userMsg = "💰 <b>Deposit Instructions</b>\n\n";
+    $userMsg .= "💳 <b>Payment Method:</b> {$methodName}\n\n";
+    $userMsg .= "📋 <b>Instructions:</b>\n";
+    
+    // Customize instructions based on payment method
+    switch ($method) {
+        case 'cbe':
+            $userMsg .= "Please deposit to CBE account:\n\n";
+            $userMsg .= "🏦 <b>Bank:</b> Commercial Bank of Ethiopia\n";
+            $userMsg .= "👤 <b>Account Name:</b> [Admin will provide]\n";
+            $userMsg .= "🔢 <b>Account Number:</b> [Admin will provide]\n";
+            break;
+        case 'cbe_birr':
+        case 'birr':
+            $userMsg .= "Please deposit using CBE Birr:\n\n";
+            $userMsg .= "📱 <b>Service:</b> CBE Birr\n";
+            $userMsg .= "📞 <b>Phone Number:</b> [Admin will provide]\n";
+            break;
+        case 'telebirr':
+            $userMsg .= "Please deposit using TeleBirr:\n\n";
+            $userMsg .= "📱 <b>Service:</b> TeleBirr\n";
+            $userMsg .= "📞 <b>Phone Number:</b> [Admin will provide]\n";
+            break;
+        default:
+            $userMsg .= "[Admin will provide payment details]\n";
+            break;
+    }
+    
+    $userMsg .= "\n⏳ <b>Admin will send you the payment details shortly.</b>";
+    sendMessage($targetUserId, $userMsg, false);
+}
+
+function answerCallbackQuery($callbackId, $text = '') {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/answerCallbackQuery';
+    $payload = ['callback_query_id' => $callbackId];
+    if ($text) {
+        $payload['text'] = $text;
+    }
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+function handleCreateCardCallback($chatId, $userId) {
+    sendTypingAction($chatId);
+    
+    $msg = "💳 <b>Create Virtual Card</b>\n\n";
+    $msg .= "To create a card, you need to deposit funds to your wallet first.\n\n";
+    $msg .= "👇 Click the button below to request a deposit:";
+    
+    // Send message with deposit button
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $msg,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    ['text' => '💰 Deposit to Wallet', 'callback_data' => 'deposit_wallet']
+                ]
+            ]
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+}
+
+function requestAdminDeposit($chatId, $userId) {
+    sendTypingAction($chatId);
+    
+    $userData = getUserRegistrationData($userId);
+    $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
+    
+    // Notify admin with payment method options
+    if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
+        $adminMsg = "💰 <b>Deposit Request</b>\n\n";
+        $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
+        $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
+        $adminMsg .= "👇 <b>Select payment method:</b>";
+        
+        $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+        $payload = [
+            'chat_id' => ADMIN_CHAT_ID,
+            'text' => $adminMsg,
+            'parse_mode' => 'HTML',
+            'reply_markup' => [
+                'inline_keyboard' => [
+                    [
+                        ['text' => '🏦 CBE', 'callback_data' => "deposit_method_cbe_{$userId}"],
+                        ['text' => '💵 CBE Birr', 'callback_data' => "deposit_method_cbe_birr_{$userId}"]
+                    ],
+                    [
+                        ['text' => '📱 TeleBirr', 'callback_data' => "deposit_method_telebirr_{$userId}"],
+                        ['text' => '💳 Other', 'callback_data' => "deposit_method_other_{$userId}"]
+                    ]
+                ]
+            ]
+        ];
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_exec($ch);
+        curl_close($ch);
+    }
+    
+    // Notify user
+    $userMsg = "✅ <b>Deposit Request Sent</b>\n\n";
+    $userMsg .= "Your deposit request has been sent to the admin.\n\n";
+    $userMsg .= "⏳ Please wait for payment instructions.";
+    sendMessage($chatId, $userMsg, true);
+}
 
 // ==================== COMMAND HANDLERS ====================
 
@@ -1135,13 +1358,19 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                     $msg .= "Please check your information and try /register again.";
                     sendMessage($chatId, $msg, true);
                 } else {
-                    // Mark as completed
-                    markUserRegistrationComplete($userId, $result['customer_id'] ?? '');
+                    // Mark as completed with KYC pending
+                    markUserRegistrationComplete($userId, $result['customer_id'] ?? '', 'pending');
                     
                     $msg = "✅ <b>Registration Successful!</b>\n\n";
                     $msg .= "🎉 Your customer account has been created in StroWallet.\n\n";
-                    $msg .= "You can now create virtual cards using ➕ <b>Create Card</b>";
+                    $msg .= "⏳ <b>KYC Status: Under Review</b>\n\n";
+                    $msg .= "📋 Your documents are being verified by StroWallet.\n\n";
+                    $msg .= "🔔 You will be notified once your KYC is approved.\n\n";
+                    $msg .= "⏱️ <i>This usually takes a few hours.</i>";
                     sendMessage($chatId, $msg, true);
+                    
+                    // Notify admin about new registration
+                    notifyAdminNewRegistration($userId, $userData['first_name'] ?? '', $userData['last_name'] ?? '');
                 }
             } elseif ($text === 'edit' || $text === 'cancel' || $text === '❌') {
                 updateUserRegistrationState($userId, 'idle');
@@ -1294,7 +1523,7 @@ function updateUserField($userId, $field, $value) {
     }
 }
 
-function markUserRegistrationComplete($userId, $customerId = '') {
+function markUserRegistrationComplete($userId, $customerId = '', $kycStatus = 'pending') {
     $pdo = getDBConnection();
     if (!$pdo) return false;
     
@@ -1304,15 +1533,31 @@ function markUserRegistrationComplete($userId, $customerId = '') {
             SET registration_state = 'completed',
                 is_registered = TRUE,
                 strowallet_customer_id = ?,
+                kyc_status = ?,
                 completed_at = CURRENT_TIMESTAMP,
                 updated_at = CURRENT_TIMESTAMP 
             WHERE telegram_user_id = ?
         ");
-        return $stmt->execute([$customerId, $userId]);
+        return $stmt->execute([$customerId, $kycStatus, $userId]);
     } catch (PDOException $e) {
         error_log("Error marking registration complete: " . $e->getMessage());
         return false;
     }
+}
+
+function notifyAdminNewRegistration($userId, $firstName, $lastName) {
+    $adminChatId = ADMIN_CHAT_ID;
+    if (empty($adminChatId) || $adminChatId === 'your_telegram_admin_chat_id_for_alerts') {
+        return; // Admin notifications not configured
+    }
+    
+    $msg = "🆕 <b>New Registration!</b>\n\n";
+    $msg .= "👤 <b>User:</b> $firstName $lastName\n";
+    $msg .= "🆔 <b>Telegram ID:</b> <code>$userId</code>\n";
+    $msg .= "⏳ <b>KYC Status:</b> Under Review\n\n";
+    $msg .= "📋 Check the admin panel for details.";
+    
+    sendMessage($adminChatId, $msg, false);
 }
 
 function createStroWalletCustomerFromDB($userId) {

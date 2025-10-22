@@ -121,35 +121,44 @@ function handleKYCUpdated($data) {
         default => 'pending'
     };
     
+    // Connect to database
+    $pdo = getDBConnection();
+    if (!$pdo) return;
+    
     // Update user KYC status in database
     try {
-        $updateFields = ['kyc_status' => $dbStatus];
+        // Find user by email or customer ID
+        $whereClause = $email ? "email = ?" : "strowallet_customer_id = ?";
+        $whereValue = $email ?: $customerId;
         
-        if ($customerId) {
-            $updateFields['strow_customer_id'] = $customerId;
+        $stmt = $pdo->prepare("SELECT telegram_user_id, first_name, last_name FROM user_registrations WHERE $whereClause LIMIT 1");
+        $stmt->execute([$whereValue]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$user) {
+            logEvent('kyc_update_no_user', ['email' => $email, 'customer_id' => $customerId]);
+            return;
         }
         
+        // Update KYC status and persist customer ID
+        $updateStmt = $pdo->prepare("
+            UPDATE user_registrations 
+            SET kyc_status = ?, 
+                strowallet_customer_id = COALESCE(?, strowallet_customer_id),
+                updated_at = CURRENT_TIMESTAMP 
+            WHERE $whereClause
+        ");
+        $updateStmt->execute([$dbStatus, $customerId, $whereValue]);
+        
+        $telegramUserId = $user['telegram_user_id'];
+        $fullName = $user['first_name'] . ' ' . $user['last_name'];
+        
+        // Notify user based on status
         if ($dbStatus === 'approved') {
-            $updateFields['kyc_approved_at'] = date('Y-m-d H:i:s');
+            notifyUserKYCApproved($telegramUserId);
         } elseif ($dbStatus === 'rejected') {
-            $updateFields['kyc_rejected_at'] = date('Y-m-d H:i:s');
-            if (isset($data['rejection_reason'])) {
-                $updateFields['kyc_rejection_reason'] = $data['rejection_reason'];
-            }
+            notifyUserKYCRejected($telegramUserId, $data['rejection_reason'] ?? 'Not specified');
         }
-        
-        $setParts = [];
-        $params = [];
-        foreach ($updateFields as $key => $value) {
-            $setParts[] = "$key = ?";
-            $params[] = $value;
-        }
-        
-        $whereClause = $email ? "email = ?" : "strow_customer_id = ?";
-        $params[] = $email ?: $customerId;
-        
-        $query = "UPDATE users SET " . implode(', ', $setParts) . " WHERE $whereClause";
-        dbQuery($query, $params);
         
         // Notify admin
         if (!empty(ADMIN_CHAT_ID)) {
@@ -160,8 +169,9 @@ function handleKYCUpdated($data) {
             };
             
             $msg = "{$statusEmoji} <b>KYC Status Updated</b>\n\n";
+            $msg .= "👤 <b>User:</b> {$fullName}\n";
             $msg .= "📧 <b>Email:</b> " . ($email ?: 'N/A') . "\n";
-            $msg .= "🆔 <b>Customer ID:</b> " . ($customerId ? maskId($customerId) : 'N/A') . "\n";
+            $msg .= "🆔 <b>Telegram ID:</b> <code>{$telegramUserId}</code>\n";
             $msg .= "📋 <b>Status:</b> " . ucfirst($dbStatus) . "\n";
             $msg .= "🕐 <b>Updated:</b> " . date('d/m/Y H:i:s');
             
@@ -182,6 +192,52 @@ function handleKYCRejected($data) {
     handleKYCUpdated($data);
 }
 
+// ==================== USER NOTIFICATION FUNCTIONS ====================
+
+function notifyUserKYCApproved($telegramUserId) {
+    $msg = "🎉 <b>KYC Approved!</b>\n\n";
+    $msg .= "✅ Your identity verification has been approved.\n\n";
+    $msg .= "You can now create virtual cards!\n\n";
+    $msg .= "👇 Click the button below to get started:";
+    
+    // Send message with inline button
+    sendTelegramMessageWithButton($telegramUserId, $msg, [
+        'text' => '➕ Create Card',
+        'callback_data' => 'create_card'
+    ]);
+}
+
+function notifyUserKYCRejected($telegramUserId, $reason) {
+    $msg = "❌ <b>KYC Verification Failed</b>\n\n";
+    $msg .= "Your identity verification was not approved.\n\n";
+    $msg .= "📋 <b>Reason:</b> {$reason}\n\n";
+    $msg .= "Please contact support for assistance.";
+    
+    sendTelegramMessage($telegramUserId, $msg);
+}
+
+function getDBConnection() {
+    $dbUrl = getenv('DATABASE_URL');
+    if (empty($dbUrl)) {
+        return null;
+    }
+    
+    try {
+        $db = parse_url($dbUrl);
+        $port = $db['port'] ?? 5432;
+        $pdo = new PDO(
+            "pgsql:host={$db['host']};port={$port};dbname=" . ltrim($db['path'], '/'),
+            $db['user'],
+            $db['pass']
+        );
+        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        return $pdo;
+    } catch (PDOException $e) {
+        error_log("Database connection failed: " . $e->getMessage());
+        return null;
+    }
+}
+
 // ==================== HELPER FUNCTIONS ====================
 
 function sendTelegramMessage($chatId, $text) {
@@ -191,6 +247,36 @@ function sendTelegramMessage($chatId, $text) {
         'chat_id' => $chatId,
         'text' => $text,
         'parse_mode' => 'HTML'
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return $response;
+}
+
+function sendTelegramMessageWithButton($chatId, $text, $button) {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    [
+                        'text' => $button['text'],
+                        'callback_data' => $button['callback_data']
+                    ]
+                ]
+            ]
+        ]
     ];
     
     $ch = curl_init($url);
