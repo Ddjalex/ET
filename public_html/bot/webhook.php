@@ -1138,22 +1138,26 @@ function showRegistrationReview($chatId, $userId) {
     $msg .= "👤 <b>Personal Details</b>\n";
     $msg .= "• Name: {$userData['first_name']} {$userData['last_name']}\n";
     $msg .= "• DOB: {$userData['date_of_birth']}\n";
-    $msg .= "• Phone: {$userData['phone_number']}\n";
-    $msg .= "• Email: {$userData['customer_email']}\n\n";
+    $msg .= "• Phone: " . ($userData['phone'] ?? $userData['phone_number'] ?? '') . "\n";
+    $msg .= "• Email: " . ($userData['email'] ?? $userData['customer_email'] ?? '') . "\n\n";
     
     $msg .= "🏠 <b>Address</b>\n";
     $msg .= "• House: {$userData['house_number']}\n";
     $msg .= "• Street: {$userData['address_line1']}\n";
-    $msg .= "• City: {$userData['city']}\n";
-    $msg .= "• State: {$userData['state']}\n";
-    $msg .= "• ZIP: {$userData['zip_code']}\n";
+    $msg .= "• City: " . ($userData['address_city'] ?? $userData['city'] ?? '') . "\n";
+    $msg .= "• State: " . ($userData['address_state'] ?? $userData['state'] ?? '') . "\n";
+    $msg .= "• ZIP: " . ($userData['address_zip'] ?? $userData['zip_code'] ?? '') . "\n";
     $msg .= "• Country: {$userData['address_country']}\n\n";
     
     $msg .= "🆔 <b>Identification</b>\n";
     $msg .= "• Type: {$userData['id_type']}\n";
     $msg .= "• Number: {$userData['id_number']}\n";
-    $msg .= "• ID Image: " . (strlen($userData['id_image_url']) > 50 ? substr($userData['id_image_url'], 0, 47) . '...' : $userData['id_image_url']) . "\n";
-    $msg .= "• Photo: " . (strlen($userData['user_photo_url']) > 50 ? substr($userData['user_photo_url'], 0, 47) . '...' : $userData['user_photo_url']) . "\n\n";
+    
+    $idImageUrl = $userData['id_front_photo_url'] ?? $userData['id_image_url'] ?? '';
+    $selfieUrl = $userData['selfie_photo_url'] ?? $userData['user_photo_url'] ?? '';
+    
+    $msg .= "• ID Image: " . ($idImageUrl && strlen($idImageUrl) > 50 ? substr($idImageUrl, 0, 47) . '...' : $idImageUrl) . "\n";
+    $msg .= "• Photo: " . ($selfieUrl && strlen($selfieUrl) > 50 ? substr($selfieUrl, 0, 47) . '...' : $selfieUrl) . "\n\n";
     
     $msg .= "━━━━━━━━━━━━━━━━━━━━━━\n\n";
     $msg .= "✅ Reply <b>CONFIRM</b> to create your account\n";

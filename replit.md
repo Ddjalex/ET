@@ -49,6 +49,13 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
+**October 22, 2025 - Registration Review Fix**
+- **Bug Fix**: Fixed registration review message not displaying entered information
+- **Issue**: Review message was using wrong database column names (phone_number, customer_email, city, state, zip_code, id_image_url, user_photo_url)
+- **Solution**: Updated `showRegistrationReview()` to use correct schema column names (phone, email, address_city, address_state, address_zip, id_front_photo_url, selfie_photo_url)
+- **Impact**: Users can now see all their entered information in the review message before confirming registration
+- **Backward Compatibility**: Added fallbacks for legacy column names to support existing data
+
 **October 22, 2025 - Security Enhancements**
 - **Selfie Upload Security**: Removed URL upload option for selfies, now only accepts direct camera photos
 - **User Messaging**: Updated all prompts to say "selfie" instead of "selfie/photo" for clarity
