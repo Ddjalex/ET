@@ -1281,7 +1281,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             
             // Show country-specific ID options with numbers
             if ($country === 'ET') {
-                $msg .= "Reply with the number:\n\n1️⃣ National ID\n2️⃣ Government ID\n3️⃣ Passport";
+                $msg .= "Reply with the number:\n\n1️⃣ National ID\n2️⃣ Passport";
             } elseif ($country === 'NG') {
                 $msg .= "Reply with the number:\n\n1️⃣ BVN\n2️⃣ NIN\n3️⃣ Passport";
             } else {
@@ -1300,8 +1300,7 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             if ($userCountry === 'ET') {
                 $idTypeMap = [
                     '1' => 'NATIONAL_ID',
-                    '2' => 'GOVERNMENT_ID',
-                    '3' => 'PASSPORT'
+                    '2' => 'PASSPORT'
                 ];
             } elseif ($userCountry === 'NG') {
                 $idTypeMap = [
@@ -1319,8 +1318,9 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
             
             // Check if user entered a valid number
             $selectedNumber = trim($text);
+            $maxOptions = count($idTypeMap);
             if (!isset($idTypeMap[$selectedNumber])) {
-                $msg = "❌ Invalid selection. Please reply with 1, 2, or 3.";
+                $msg = "❌ Invalid selection. Please reply with a number from 1 to $maxOptions.";
                 sendMessage($chatId, $msg, false);
                 break;
             }
@@ -1760,7 +1760,7 @@ function promptForCurrentField($chatId, $state, $userId = null) {
         $prompt = "🆔 <b>What type of ID do you have?</b>\n\n";
         $prompt .= "Reply with the number:\n\n";
         if ($country === 'ET') {
-            $prompt .= "1️⃣ National ID\n2️⃣ Government ID\n3️⃣ Passport";
+            $prompt .= "1️⃣ National ID\n2️⃣ Passport";
         } elseif ($country === 'NG') {
             $prompt .= "1️⃣ BVN\n2️⃣ NIN\n3️⃣ Passport";
         } else {
