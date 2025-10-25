@@ -16,8 +16,8 @@ ini_set('error_log', '/tmp/telegram_bot_errors.log');
 // Configuration - Use environment variables (Replit Secrets or .env file)
 define('BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: getenv('BOT_TOKEN') ?: '');
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
-define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
+define('STROW_PUBLIC_KEY', getenv('STROWALLET_API_KEY') ?: getenv('STROW_PUBLIC_KEY') ?: '');
+define('STROW_SECRET_KEY', getenv('STROWALLET_WEBHOOK_SECRET') ?: getenv('STROW_SECRET_KEY') ?: '');
 define('STROWALLET_EMAIL', getenv('STROWALLET_EMAIL') ?: '');
 define('ADMIN_CHAT_ID', getenv('ADMIN_CHAT_ID') ?: '');
 define('SUPPORT_URL', getenv('SUPPORT_URL') ?: 'https://t.me/support');
@@ -1935,20 +1935,35 @@ function createStroWalletCustomerFromDB($userId) {
         'idType' => $userData['id_type']
     ];
     
-    error_log("Calling StroWallet API with data: " . json_encode([
-        'endpoint' => '/bitvcard/create-user/',
-        'email' => $customerData['customerEmail'],
-        'phone' => $customerData['phoneNumber'],
-        'name' => $customerData['firstName'] . ' ' . $customerData['lastName']
-    ]));
+    $publicKeyPreview = STROW_PUBLIC_KEY ? substr(STROW_PUBLIC_KEY, 0, 10) . '...' . substr(STROW_PUBLIC_KEY, -10) : 'NOT SET';
+    error_log("API Configuration - Public Key: " . $publicKeyPreview);
+    error_log("Calling StroWallet API /bitvcard/create-user/ with full customer data:");
+    error_log("Customer Data: " . json_encode($customerData, JSON_PRETTY_PRINT));
     
     // Call StroWallet create-user API
     $result = callStroWalletAPI('/bitvcard/create-user/', 'POST', $customerData, true);
     
+    error_log("StroWallet API Response: " . json_encode($result));
+    
     if (isset($result['error'])) {
-        error_log("ERROR: StroWallet API call failed: " . $result['error']);
+        error_log("ERROR: StroWallet API call failed: " . json_encode($result));
+        return $result;
+    }
+    
+    // Extract customer ID from response (check various possible field names)
+    $customerId = $result['customer_id'] ?? $result['customerId'] ?? $result['id'] ?? $result['data']['id'] ?? null;
+    
+    if ($customerId) {
+        error_log("SUCCESS: Customer created in StroWallet with ID: " . $customerId);
+        
+        // Update database with StroWallet customer ID
+        $db = getDBConnection();
+        if ($db) {
+            $stmt = $db->prepare("UPDATE user_registrations SET strowallet_customer_id = ?, kyc_status = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
+            $stmt->execute([$customerId, 'pending', $userId]);
+        }
     } else {
-        error_log("SUCCESS: StroWallet API call succeeded - Customer ID: " . ($result['customer_id'] ?? 'N/A'));
+        error_log("WARNING: Customer created but no ID returned. Response: " . json_encode($result));
     }
     
     error_log("=== createStroWalletCustomerFromDB END ===");
