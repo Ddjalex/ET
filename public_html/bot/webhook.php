@@ -410,8 +410,19 @@ function requestAdminDeposit($chatId, $userId) {
 }
 
 function processDepositAmount($chatId, $userId, $amount) {
-    // Validate amount
-    $usdAmount = floatval($amount);
+    // Clean and validate amount - remove spaces, commas, and $ signs
+    $cleanedAmount = str_replace([',', ' ', '$'], '', trim($amount));
+    
+    // Validate it's a valid number
+    if (!is_numeric($cleanedAmount)) {
+        $msg = "❌ <b>Invalid Format</b>\n\n";
+        $msg .= "Please enter a numeric value (e.g., 100 or 1,000).\n\n";
+        $msg .= "Try again:";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    $usdAmount = floatval($cleanedAmount);
     
     if ($usdAmount < 5) {
         $msg = "❌ <b>Invalid Amount</b>\n\n";
@@ -431,6 +442,27 @@ function processDepositAmount($chatId, $userId, $amount) {
     
     // Fetch exchange rate from settings
     $exchangeRate = getExchangeRate();
+    
+    // Validate exchange rate is valid
+    if ($exchangeRate <= 0) {
+        error_log("Invalid exchange rate: $exchangeRate");
+        $msg = "❌ <b>Configuration Error</b>\n\n";
+        $msg .= "Exchange rate is not configured properly.\n\n";
+        $msg .= "Please try again later or contact support.";
+        sendMessage($chatId, $msg, false);
+        
+        // Alert admin about configuration issue
+        if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
+            $adminMsg = "⚠️ <b>Configuration Error</b>\n\n";
+            $adminMsg .= "Exchange rate is invalid or zero: $exchangeRate\n\n";
+            $adminMsg .= "Please update the exchange rate in admin settings.";
+            sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
+        }
+        
+        // Reset user state
+        setUserDepositState($userId, null);
+        return;
+    }
     
     // Calculate Ethiopian Birr amount
     $etbAmount = $usdAmount * $exchangeRate;
