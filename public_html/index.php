@@ -126,6 +126,15 @@
         <div class="info">
             <p><strong>🔐 Setup Required:</strong> Configure your Telegram bot webhook to point to the Telegram Bot Webhook URL above, and set your StroWallet webhook to the StroWallet Events Webhook URL.</p>
         </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="/register.php" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3); transition: transform 0.2s;">
+                📝 View Registration Form
+            </a>
+            <a href="/admin/" style="display: inline-block; background: #374151; color: white; padding: 15px 30px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-left: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); transition: transform 0.2s;">
+                🔐 Admin Panel
+            </a>
+        </div>
     </div>
 </body>
 </html>
