@@ -862,6 +862,46 @@ function handleCheckStatus($chatId, $userId) {
     $registrationState = $userData['registration_state'] ?? '';
     $strowalletCustomerId = $userData['strowallet_customer_id'] ?? '';
     
+    // If email exists but no StroWallet customer ID, try to fetch from StroWallet API
+    if ($email && !$strowalletCustomerId) {
+        error_log("Fetching customer status from StroWallet for user $userId (email: $email)");
+        
+        $customerCheck = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($email), 'GET', [], true);
+        
+        if (!isset($customerCheck['error']) && isset($customerCheck['data'])) {
+            // Extract customer data from response
+            $customerData = $customerCheck['data'];
+            $strowalletCustomerId = $customerData['customer_id'] ?? $customerData['id'] ?? '';
+            $fetchedKycStatus = $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
+            
+            // Map StroWallet KYC status to our format
+            if (in_array(strtolower($fetchedKycStatus), ['verified', 'approved'])) {
+                $kycStatus = 'approved';
+            } elseif (in_array(strtolower($fetchedKycStatus), ['rejected', 'failed'])) {
+                $kycStatus = 'rejected';
+            } else {
+                // 'pending', 'under_review', 'unreview', 'processing', etc.
+                $kycStatus = 'pending';
+            }
+            
+            // Update local database with StroWallet data
+            if ($strowalletCustomerId) {
+                $db = getDBConnection();
+                if ($db) {
+                    try {
+                        $stmt = $db->prepare("UPDATE user_registrations SET strowallet_customer_id = ?, kyc_status = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
+                        $stmt->execute([$strowalletCustomerId, $kycStatus, $userId]);
+                        error_log("Updated user $userId: strowallet_customer_id=$strowalletCustomerId, kyc_status=$kycStatus");
+                    } catch (Exception $e) {
+                        error_log("Failed to update user registration: " . $e->getMessage());
+                    }
+                }
+            }
+            
+            error_log("Fetched KYC status from StroWallet: $fetchedKycStatus (mapped to: $kycStatus)");
+        }
+    }
+    
     $msg = "📋 <b>Account Status</b>\n\n";
     $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
     
@@ -875,20 +915,23 @@ function handleCheckStatus($chatId, $userId) {
     $msg .= "🆔 <b>User ID:</b> <code>{$userId}</code>\n\n";
     $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
     
-    // Check registration status
-    if (!$isRegistered || !$strowalletCustomerId) {
-        if ($registrationState === 'awaiting_confirmation') {
-            $msg .= "⏳ <b>Registration Status:</b> Awaiting Confirmation\n\n";
-            $msg .= "📝 Please review your information and send <b>CONFIRM</b> to complete registration.";
-        } else {
-            $msg .= "⚠️ <b>Registration Status:</b> Incomplete\n\n";
-            $msg .= "📝 Please complete your registration using /register";
-        }
+    // Check if user has started registration but not completed submission
+    if ($registrationState === 'awaiting_confirmation') {
+        $msg .= "⏳ <b>Registration Status:</b> Awaiting Confirmation\n\n";
+        $msg .= "📝 Please review your information and send <b>CONFIRM</b> to complete registration.";
         sendMessage($chatId, $msg, false);
         return;
     }
     
-    // Show KYC status
+    // Check if registration data is incomplete (no email = never started registration)
+    if (!$email) {
+        $msg .= "⚠️ <b>Registration Status:</b> Incomplete\n\n";
+        $msg .= "📝 Please complete your registration using /register";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    // Show KYC status (even if strowallet_customer_id is missing)
     $msg .= "🔐 <b>KYC Verification Status:</b>\n\n";
     
     switch ($kycStatus) {
