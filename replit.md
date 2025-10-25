@@ -1,9 +1,7 @@
 # Telegram Crypto Card Bot - Project Documentation
 
 ## Overview
-This project is a production-ready Telegram bot designed to manage virtual crypto cards by integrating with the StroWallet API. The bot is built using native PHP 8+ (without frameworks or Composer dependencies) and is optimized for cPanel deployment. Its primary purpose is to provide users with functionalities like creating virtual cards, listing existing cards, viewing user information, managing wallets, and handling deposits through a Telegram interface.
-
-The project features a comprehensive admin panel for managing deposits, KYC verification, and system settings, ensuring secure and efficient operation.
+This project is a production-ready Telegram bot designed to manage virtual crypto cards through integration with the StroWallet API. Built with native PHP 8+ for cPanel deployment, it offers functionalities such as virtual card creation, card listing, user information display, wallet management, and deposit handling via Telegram. A comprehensive admin panel supports deposit management, KYC verification, and system settings, ensuring secure and efficient operations. The project aims to provide a robust solution for crypto card management.
 
 ## User Preferences
 ### Coding Conventions
@@ -24,13 +22,13 @@ The project features a comprehensive admin panel for managing deposits, KYC veri
 ## System Architecture
 
 ### File Structure
-The project is organized into `database/` for migrations, `public_html/` containing the `admin/` panel and `bot/` webhooks, and a `scripts/` directory for utilities. The `public_html/admin/` includes configuration, templates, login, dashboard, and management pages for deposits, KYC, and settings. The `public_html/bot/` handles Telegram and StroWallet webhooks.
+The project is organized into `database/` for migrations, `public_html/` containing `admin/` panel and `bot/` webhooks, and `scripts/` for utilities. `public_html/admin/` includes configuration, templates, login, dashboard, and management pages for deposits, KYC, and settings. `public_html/bot/` handles Telegram and StroWallet webhooks.
 
 ### Key Technologies
 - **Language:** PHP 8.2 (native, no frameworks)
 - **Database:** PostgreSQL (Replit/Neon)
 - **Deployment:** cPanel via webhooks (HTTPS required)
-- **Admin Panel:** PHP with session-based authentication, featuring a professional crypto-themed UI with a comprehensive CSS design system, modern typography (Inter, Poppins), glass-morphism effects, and responsive components.
+- **Admin Panel:** PHP with session-based authentication, featuring a professional crypto-themed UI with a comprehensive CSS design system, modern typography, glass-morphism effects, and responsive components.
 
 ### UI/UX Decisions
 The admin panel features **premium glass-morphism design with enhanced visibility**:
@@ -42,162 +40,16 @@ The admin panel features **premium glass-morphism design with enhanced visibilit
 - **Modern Typography**: Inter (400-900), Poppins (600-900) for headings with high contrast
 - **High Visibility Alerts**: Glass effect alerts with bright, clear colors
 - **Responsive Components**: Mobile-optimized layouts, adaptive grids
-- Last updated: October 2025 - Glass-morphism with enhanced visibility and contrast
 
 ### System Design Choices
-The system implements a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. A secure password change functionality is in place with strong password requirements and audit trails. Database constraints are properly configured for normalized schema. User authentication and session management are central to the admin panel's security.
-
-### Recent Changes
-
-**October 25, 2025 - Enhanced Deposit Workflow with Exchange Rate Calculation**
-- **Deposit Amount Entry**: User can enter desired USD amount for deposit
-- **Exchange Rate Integration**: Bot fetches live exchange rate from admin settings table
-- **ETB Calculation**: Automatically calculates Ethiopian Birr amount based on current rate
-- **Deposit Summary**: Shows user complete breakdown (USD, rate, ETB total) before admin notification
-- **Payment Options Expanded**: Added BOA and M-Pesa to existing CBE, CBE Birr, TeleBirr options
-- **Workflow**:
-  1. User clicks "Deposit to Wallet" → Bot asks for USD amount
-  2. User enters amount → Bot validates (min $5, max $10,000)
-  3. Bot fetches exchange rate from settings → Calculates ETB amount
-  4. Shows summary to user → Notifies admin with payment method options
-  5. Admin selects method → Both receive tailored payment instructions
-- **Helper Functions**: `getExchangeRate()`, `processDepositAmount()`, `setUserDepositState()`, `storeDepositInfo()`
-- **Status**: ✅ PRODUCTION-READY - Complete deposit workflow with exchange rate calculation
-
-**October 25, 2025 - KYC Status Display Fix & StroWallet Image Update**
-- **Issue**: Bot showed "Registration Status: Incomplete" even when KYC was "Under Review" in StroWallet
-- **Root Cause**: Bot only checked local database, never fetched real status from StroWallet API
-- **Fixes Applied**:
-  - Modified `handleCheckStatus()` to fetch real KYC status from StroWallet `/bitvcard/getcardholder/` API
-  - Added automatic database sync when StroWallet customer ID is missing
-  - Fixed status mapping: "Unreview KYC" → "Under Review", "verified/approved" → "Verified"
-  - Removed premature "Incomplete" status for users with submitted KYC
-- **Image URL Fix**:
-  - Discovered image URLs pointing to dead Replit instance (janeway.replit.dev)
-  - Updated StroWallet customer images using `/bitvcard/updateCardCustomer/` API
-  - Images now accessible and showing correctly in StroWallet dashboard
-- **Status**: ✅ PRODUCTION-READY - Status now syncs with StroWallet in real-time
-
-**October 22, 2025 - KYC Enforcement Fix (CRITICAL SECURITY)**
-- **Issue**: Users were receiving menu buttons immediately after registration, even with KYC pending
-- **Root Cause**: Bot didn't check KYC status before showing menu buttons or allowing command execution
-- **Fixes Applied**:
-  - Changed registration success message from "Registration Successful!" to "KYC Under Review"
-  - Removed keyboard buttons from being shown until KYC is approved
-  - Added comprehensive logging to `createStroWalletCustomerFromDB()` for debugging
-  - Applied migration 006 to add `kyc_status` and `strowallet_customer_id` columns
-  - Created `checkKYCStatus()` helper function for consistent KYC verification
-  - Added KYC checks to ALL command handlers: `/start`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`
-  - Fixed `handleRegisterStart` to check KYC before showing keyboard
-  - Added KYC checks to callback handlers (`create_card`, `deposit_wallet`)
-  - Updated `initializeUserRegistration` to set `kyc_status='pending'` for new users
-- **User Experience**:
-  - Users with pending KYC see: "⏳ KYC Under Review" message with no menu buttons
-  - Users with approved KYC see: Full menu with all buttons
-  - Users with rejected KYC see: Error message with support contact
-- **Security**: All protected commands now properly gate-checked behind KYC approval
-- **Architect Review**: ✅ Passed - All KYC enforcement points verified secure
-- **Status**: PRODUCTION-READY - Registration now correctly prevents unauthorized access
-
-**October 22, 2025 - KYC Approval Workflow & Deposit Request System (PRODUCTION-READY)**
-- **Complete KYC Approval Flow**: Implemented end-to-end KYC approval workflow with user and admin notifications
-- **Registration Update**: Changed post-registration message to "KYC Under Review" instead of immediate success
-- **StroWallet Webhook Enhancements**:
-  - Persists `strowallet_customer_id` for reliable event matching (handles events with/without email)
-  - Sends notifications to both user and admin on KYC approval/rejection
-  - Updates database with KYC status, timestamps, and rejection reasons
-- **User Notifications**: 
-  - KYC approved: User receives notification with "Create Card" inline button
-  - KYC rejected: User receives rejection reason with support contact
-- **Admin Notifications**:
-  - New registration alerts with user details
-  - KYC status change alerts (approved/rejected) with full context
-- **Create Card Flow**:
-  - Gated behind KYC approval (only approved users can create cards)
-  - Shows "Deposit to Wallet" button after card creation initiated
-- **Deposit Request System**:
-  - User clicks "Deposit to Wallet" → Admin receives inline keyboard with payment options
-  - Payment methods: CBE (Commercial Bank of Ethiopia), CBE Birr, TeleBirr, Other
-  - Admin selects method → Both admin and user receive confirmation messages
-  - User receives tailored payment instructions based on selected method
-- **Callback Routing**:
-  - Admin callbacks bypass registration check (deposit_method_* callbacks)
-  - User callbacks enforce registration and KYC status verification
-  - Proper parsing of complex callback data (e.g., cbe_birr with multi-part identifiers)
-- **Architect Review**: ✅ Approved - Complete workflow tested and ready for production
-- **Status**: Ready for end-to-end testing with real Telegram bot and StroWallet webhooks
-
-**October 22, 2025 - Registration API Call Bug Fix (CRITICAL)**
-- **Bug Fix 1 - Phone Number Missing**: Fixed StroWallet API call failing with "Missing required field: phone_number"
-- **Root Cause**: The `createStroWalletCustomerFromDB()` function used outdated column names from before database schema fix
-- **Issues Fixed**:
-  - API validation: `phone_number` → `phone` ✓
-  - API validation: `customer_email` → `email` ✓
-  - API validation: `city` → `address_city` ✓
-  - API validation: `state` → `address_state` ✓
-  - API validation: `zip_code` → `address_zip` ✓
-  - API payload: All fields updated to use correct database column names ✓
-  - Photo URLs: Added backward compatibility for both old and new field names ✓
-- **Bug Fix 2 - ID Type Selection UX**: Changed from text names to numbered selection (1, 2, 3)
-- **UX Improvements**:
-  - Users now select ID type by number instead of typing "GOVERNMENT_ID", "PASSPORT", etc.
-  - Bot confirms selected ID type with formatted name (e.g., "Government Id")
-  - Country-specific options maintained (ET: National ID/Government ID/Passport, NG: BVN/NIN/Passport)
-  - Invalid selections show clear error message requesting 1, 2, or 3
-- **Impact**: Registration flow now completes successfully with all required fields sent to StroWallet API
-- **Architect Review**: ✅ Passed - All field mappings correct, no regressions found
-
-**October 22, 2025 - Registration Data Saving Fix (CRITICAL)**
-- **Bug Fix**: Fixed registration flow not saving user data to database
-- **Root Cause**: The `updateUserField()` function and all registration handlers were using wrong database column names
-- **Issues Fixed**:
-  - Phone: `phone_number` → `phone` ✓
-  - Email: `customer_email` → `email` ✓
-  - City: `city` → `address_city` ✓
-  - State: `state` → `address_state` ✓
-  - ZIP: `zip_code` → `address_zip` ✓
-  - ID Image: `id_image_url` → `id_front_photo_url` ✓
-  - Selfie: Missing save call → Added `selfie_photo_url` ✓
-- **Changes Made**:
-  1. Updated `updateUserField()` allowedFields array with correct schema column names
-  2. Fixed all 7 registration case handlers to use correct column names
-  3. Added missing database save for selfie photo upload
-  4. Updated `showRegistrationReview()` with fallbacks for backward compatibility
-- **Impact**: Registration now saves ALL user data correctly and displays it properly in the review message
-- **Testing**: User registration data cleared to enable fresh testing with fixes
-
-**October 22, 2025 - Security Enhancements**
-- **Selfie Upload Security**: Removed URL upload option for selfies, now only accepts direct camera photos
-- **User Messaging**: Updated all prompts to say "selfie" instead of "selfie/photo" for clarity
-- **Security Messaging**: Added clear explanations that only direct photos are accepted for security purposes
-- **Bug Fix**: Restored .env file to fix bot token access issue (bot was unable to respond after selfie upload)
-
-**October 20, 2025 - Initial Setup**
-- **Environment Setup**: Created `.env` file with admin credentials (admin/admin123) and API keys stored in Replit Secrets
-- **Database Setup**: PostgreSQL database provisioned and all migrations applied successfully (10 tables created)
-- **KYC Real-Time Updates**: Enhanced admin panel with auto-refresh (30s) for real-time KYC status monitoring
-- **Webhook Integration**: Added StroWallet webhook handlers for KYC events (kyc_updated, kyc_approved, kyc_rejected)
-- **Admin Notifications**: Telegram alerts sent to admin when KYC status changes from StroWallet
-- **Auto-Sync Feature**: KYC page automatically syncs with StroWallet API and updates database in real-time
-- **Foreign Key Fixes**: Corrected `admin_actions` and `settings` tables to reference `admin_users` instead of `users` table
-- **Admin Login**: Fixed default admin password to match login page (username: `admin`, password: `admin123`)
-- **UI/Alert Fixes**: Corrected alert message CSS classes from `error`/`success` to `alert-error`/`alert-success` for proper styling
-- **Migration System**: Added migration 004 to document foreign key constraint fixes
+The system utilizes a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with authentication, session management, and CSRF protection. Secure password change functionality with strong requirements and audit trails is implemented. Database constraints are properly configured for a normalized schema. User authentication and session management are central to the admin panel's security. Key features include a comprehensive KYC approval workflow, an enhanced deposit system with exchange rate calculations, and real-time KYC status synchronization with the StroWallet API. All protected commands are gated behind KYC approval.
 
 ### Features Implemented
 - **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/invite`, `/support`.
 - **Reply Keyboard Buttons:** Create Card, My Cards, User Info, Wallet, Invite Friends, Support.
-- **Webhook Features:** 
-  - Telegram webhook with secret token verification
-  - StroWallet webhook with HMAC verification and real-time KYC sync
-  - Admin alerts for deposits and KYC status changes via Telegram
-  - Automatic database updates when StroWallet sends KYC events
-- **Admin Panel KYC Management:**
-  - Real-time auto-refresh (30 seconds) for KYC status monitoring
-  - Manual sync button to fetch latest status from StroWallet API
-  - Countdown timer showing next auto-refresh
-  - Filter users by KYC status (pending, approved, rejected)
-- **Error Handling:** Comprehensive handling for authentication failures, wrong endpoints, network errors, with request ID display and user-friendly messages.
+- **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events.
+- **Admin Panel KYC Management:** Real-time auto-refresh, manual sync, user filtering by KYC status.
+- **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, and network errors, with request ID display and user-friendly messages.
 
 ## External Dependencies
 
