@@ -49,6 +49,35 @@ The system implements a dual webhook architecture for Telegram and StroWallet. I
 
 ### Recent Changes
 
+**October 25, 2025 - Enhanced Deposit Workflow with Exchange Rate Calculation**
+- **Deposit Amount Entry**: User can enter desired USD amount for deposit
+- **Exchange Rate Integration**: Bot fetches live exchange rate from admin settings table
+- **ETB Calculation**: Automatically calculates Ethiopian Birr amount based on current rate
+- **Deposit Summary**: Shows user complete breakdown (USD, rate, ETB total) before admin notification
+- **Payment Options Expanded**: Added BOA and M-Pesa to existing CBE, CBE Birr, TeleBirr options
+- **Workflow**:
+  1. User clicks "Deposit to Wallet" → Bot asks for USD amount
+  2. User enters amount → Bot validates (min $5, max $10,000)
+  3. Bot fetches exchange rate from settings → Calculates ETB amount
+  4. Shows summary to user → Notifies admin with payment method options
+  5. Admin selects method → Both receive tailored payment instructions
+- **Helper Functions**: `getExchangeRate()`, `processDepositAmount()`, `setUserDepositState()`, `storeDepositInfo()`
+- **Status**: ✅ PRODUCTION-READY - Complete deposit workflow with exchange rate calculation
+
+**October 25, 2025 - KYC Status Display Fix & StroWallet Image Update**
+- **Issue**: Bot showed "Registration Status: Incomplete" even when KYC was "Under Review" in StroWallet
+- **Root Cause**: Bot only checked local database, never fetched real status from StroWallet API
+- **Fixes Applied**:
+  - Modified `handleCheckStatus()` to fetch real KYC status from StroWallet `/bitvcard/getcardholder/` API
+  - Added automatic database sync when StroWallet customer ID is missing
+  - Fixed status mapping: "Unreview KYC" → "Under Review", "verified/approved" → "Verified"
+  - Removed premature "Incomplete" status for users with submitted KYC
+- **Image URL Fix**:
+  - Discovered image URLs pointing to dead Replit instance (janeway.replit.dev)
+  - Updated StroWallet customer images using `/bitvcard/updateCardCustomer/` API
+  - Images now accessible and showing correctly in StroWallet dashboard
+- **Status**: ✅ PRODUCTION-READY - Status now syncs with StroWallet in real-time
+
 **October 22, 2025 - KYC Enforcement Fix (CRITICAL SECURITY)**
 - **Issue**: Users were receiving menu buttons immediately after registration, even with KYC pending
 - **Root Cause**: Bot didn't check KYC status before showing menu buttons or allowing command execution

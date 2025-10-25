@@ -167,8 +167,16 @@ if ($text === '/register') {
     exit;
 }
 
+// Check if user is awaiting deposit amount input
+if ($userState === 'awaiting_amount') {
+    processDepositAmount($chatId, $userId, $text);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // If user is in registration flow (not idle), route to registration handler
-if ($userState && $userState !== 'idle' && $userState !== 'completed') {
+if ($userState && $userState !== 'idle' && $userState !== 'completed' && $userState !== 'awaiting_amount') {
     handleRegistrationFlow($chatId, $userId, $text, $userState, $fileId);
     http_response_code(200);
     echo 'OK';
@@ -269,7 +277,9 @@ function handleAdminDepositMethodSelection($chatId, $userId, $callbackData) {
     $methodNames = [
         'cbe' => 'CBE (Commercial Bank of Ethiopia)',
         'cbe_birr' => 'CBE Birr',
+        'boa' => 'BOA (Bank of Abyssinia)',
         'telebirr' => 'TeleBirr',
+        'mpesa' => 'M-Pesa',
         'other' => 'Other Payment Method'
     ];
     
@@ -311,9 +321,20 @@ function handleAdminDepositMethodSelection($chatId, $userId, $callbackData) {
             $userMsg .= "📱 <b>Service:</b> CBE Birr\n";
             $userMsg .= "📞 <b>Phone Number:</b> [Admin will provide]\n";
             break;
+        case 'boa':
+            $userMsg .= "Please deposit to BOA account:\n\n";
+            $userMsg .= "🏦 <b>Bank:</b> Bank of Abyssinia\n";
+            $userMsg .= "👤 <b>Account Name:</b> [Admin will provide]\n";
+            $userMsg .= "🔢 <b>Account Number:</b> [Admin will provide]\n";
+            break;
         case 'telebirr':
             $userMsg .= "Please deposit using TeleBirr:\n\n";
             $userMsg .= "📱 <b>Service:</b> TeleBirr\n";
+            $userMsg .= "📞 <b>Phone Number:</b> [Admin will provide]\n";
+            break;
+        case 'mpesa':
+            $userMsg .= "Please deposit using M-Pesa:\n\n";
+            $userMsg .= "📱 <b>Service:</b> M-Pesa\n";
             $userMsg .= "📞 <b>Phone Number:</b> [Admin will provide]\n";
             break;
         default:
@@ -375,14 +396,76 @@ function handleCreateCardCallback($chatId, $userId) {
 function requestAdminDeposit($chatId, $userId) {
     sendTypingAction($chatId);
     
+    // Set user state to awaiting deposit amount
+    setUserDepositState($userId, 'awaiting_amount');
+    
+    // Ask user for dollar amount
+    $msg = "💵 <b>Deposit to Wallet</b>\n\n";
+    $msg .= "How much would you like to deposit?\n\n";
+    $msg .= "💡 <b>Please enter the amount in USD</b>\n";
+    $msg .= "Example: 10 or 50.5\n\n";
+    $msg .= "📌 Minimum: $5 USD";
+    
+    sendMessage($chatId, $msg, false);
+}
+
+function processDepositAmount($chatId, $userId, $amount) {
+    // Validate amount
+    $usdAmount = floatval($amount);
+    
+    if ($usdAmount < 5) {
+        $msg = "❌ <b>Invalid Amount</b>\n\n";
+        $msg .= "Minimum deposit is $5 USD.\n\n";
+        $msg .= "Please enter a valid amount:";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    if ($usdAmount > 10000) {
+        $msg = "❌ <b>Amount Too Large</b>\n\n";
+        $msg .= "Maximum deposit is $10,000 USD.\n\n";
+        $msg .= "Please enter a valid amount:";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    // Fetch exchange rate from settings
+    $exchangeRate = getExchangeRate();
+    
+    // Calculate Ethiopian Birr amount
+    $etbAmount = $usdAmount * $exchangeRate;
+    
+    // Store deposit info temporarily
+    storeDepositInfo($userId, $usdAmount, $exchangeRate, $etbAmount);
+    
+    // Clear deposit state
+    setUserDepositState($userId, null);
+    
+    // Show calculation to user
+    $userMsg = "💰 <b>Deposit Summary</b>\n\n";
+    $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
+    $userMsg .= "💱 <b>Exchange Rate:</b> 1 USD = " . number_format($exchangeRate, 2) . " ETB\n";
+    $userMsg .= "💸 <b>ETB to Pay:</b> " . number_format($etbAmount, 2) . " Birr\n\n";
+    $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $userMsg .= "✅ Your deposit request has been sent to the admin.\n\n";
+    $userMsg .= "⏳ Please wait for payment instructions.";
+    sendMessage($chatId, $userMsg, false);
+    
+    // Get user info
     $userData = getUserRegistrationData($userId);
     $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
     
     // Notify admin with payment method options
     if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
-        $adminMsg = "💰 <b>Deposit Request</b>\n\n";
+        $adminMsg = "💰 <b>New Deposit Request</b>\n\n";
         $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
         $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
+        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
+        $adminMsg .= "💱 <b>Exchange Rate:</b> " . number_format($exchangeRate, 2) . " ETB\n";
+        $adminMsg .= "💸 <b>Amount (ETB):</b> " . number_format($etbAmount, 2) . " Birr\n\n";
+        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $adminMsg .= "👇 <b>Select payment method:</b>";
         
         $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
@@ -397,8 +480,12 @@ function requestAdminDeposit($chatId, $userId) {
                         ['text' => '💵 CBE Birr', 'callback_data' => "deposit_method_cbe_birr_{$userId}"]
                     ],
                     [
-                        ['text' => '📱 TeleBirr', 'callback_data' => "deposit_method_telebirr_{$userId}"],
-                        ['text' => '💳 Other', 'callback_data' => "deposit_method_other_{$userId}"]
+                        ['text' => '🏢 BOA', 'callback_data' => "deposit_method_boa_{$userId}"],
+                        ['text' => '📱 TeleBirr', 'callback_data' => "deposit_method_telebirr_{$userId}"]
+                    ],
+                    [
+                        ['text' => '💳 M-Pesa', 'callback_data' => "deposit_method_mpesa_{$userId}"],
+                        ['text' => '💰 Other', 'callback_data' => "deposit_method_other_{$userId}"]
                     ]
                 ]
             ]
@@ -412,12 +499,6 @@ function requestAdminDeposit($chatId, $userId) {
         curl_exec($ch);
         curl_close($ch);
     }
-    
-    // Notify user
-    $userMsg = "✅ <b>Deposit Request Sent</b>\n\n";
-    $userMsg .= "Your deposit request has been sent to the admin.\n\n";
-    $userMsg .= "⏳ Please wait for payment instructions.";
-    sendMessage($chatId, $userMsg, true);
 }
 
 // ==================== COMMAND HANDLERS ====================
@@ -2014,6 +2095,81 @@ function getTelegramUserInfo($chatId) {
     ];
 }
 
+
+// ==================== DEPOSIT HELPER FUNCTIONS ====================
+
+function getExchangeRate() {
+    $db = getDBConnection();
+    if (!$db) {
+        error_log("Failed to get DB connection for exchange rate");
+        return 130.50; // Default fallback rate
+    }
+    
+    try {
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'exchange_rate_usd_to_etb'");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($result && isset($result['value'])) {
+            $data = json_decode($result['value'], true);
+            $rate = $data['rate'] ?? 130.50;
+            error_log("Fetched exchange rate from database: $rate");
+            return floatval($rate);
+        }
+    } catch (Exception $e) {
+        error_log("Error fetching exchange rate: " . $e->getMessage());
+    }
+    
+    return 130.50; // Default fallback rate
+}
+
+function setUserDepositState($userId, $state) {
+    $db = getDBConnection();
+    if (!$db) return false;
+    
+    try {
+        // Check if record exists
+        $stmt = $db->prepare("SELECT id FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        
+        if ($stmt->fetch()) {
+            // Update existing record
+            $stmt = $db->prepare("UPDATE user_registrations SET registration_state = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
+            $stmt->execute([$state, $userId]);
+        }
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Error setting deposit state: " . $e->getMessage());
+        return false;
+    }
+}
+
+function getUserDepositState($userId) {
+    $userData = getUserRegistrationData($userId);
+    return $userData['registration_state'] ?? null;
+}
+
+function storeDepositInfo($userId, $usdAmount, $exchangeRate, $etbAmount) {
+    $db = getDBConnection();
+    if (!$db) return false;
+    
+    try {
+        // Store in a temporary table or session
+        // For now, we'll log it - in production, you'd save to a pending_deposits table
+        error_log("Deposit info stored - User: $userId, USD: $usdAmount, Rate: $exchangeRate, ETB: $etbAmount");
+        
+        // You can extend this to actually save to database
+        // Example:
+        // $stmt = $db->prepare("INSERT INTO pending_deposits (user_id, usd_amount, exchange_rate, etb_amount, created_at) VALUES (?, ?, ?, ?, NOW())");
+        // $stmt->execute([$userId, $usdAmount, $exchangeRate, $etbAmount]);
+        
+        return true;
+    } catch (Exception $e) {
+        error_log("Error storing deposit info: " . $e->getMessage());
+        return false;
+    }
+}
 
 // ==================== MOCK DATA FUNCTIONS ====================
 
