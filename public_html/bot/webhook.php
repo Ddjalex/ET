@@ -192,6 +192,8 @@ if ($text === '/quickregister') {
     handleInvite($chatId);
 } elseif ($text === '/support' || $text === '🧑‍💻 Support') {
     handleSupport($chatId);
+} elseif ($text === '/status' || $text === '/checkkyc' || $text === '📋 Check Status') {
+    handleCheckStatus($chatId, $userId);
 } else {
     sendMessage($chatId, "ℹ️ Unknown command. Please use the menu buttons below.", true);
 }
@@ -838,6 +840,85 @@ function handleSupport($chatId) {
     }
     
     sendMessage($chatId, $msg, true);
+}
+
+function handleCheckStatus($chatId, $userId) {
+    // Get user registration data
+    $userData = getUserRegistrationData($userId);
+    
+    if (!$userData) {
+        $msg = "❌ <b>Not Registered</b>\n\n";
+        $msg .= "You haven't registered yet!\n\n";
+        $msg .= "📝 Use /register to get started.";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    $kycStatus = $userData['kyc_status'] ?? 'pending';
+    $isRegistered = $userData['is_registered'] ?? false;
+    $firstName = $userData['first_name'] ?? '';
+    $lastName = $userData['last_name'] ?? '';
+    $email = $userData['email'] ?? '';
+    $registrationState = $userData['registration_state'] ?? '';
+    $strowalletCustomerId = $userData['strowallet_customer_id'] ?? '';
+    
+    $msg = "📋 <b>Account Status</b>\n\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    
+    // Show user info
+    if ($firstName) {
+        $msg .= "👤 <b>Name:</b> {$firstName} {$lastName}\n";
+    }
+    if ($email) {
+        $msg .= "📧 <b>Email:</b> {$email}\n";
+    }
+    $msg .= "🆔 <b>User ID:</b> <code>{$userId}</code>\n\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    
+    // Check registration status
+    if (!$isRegistered || !$strowalletCustomerId) {
+        if ($registrationState === 'awaiting_confirmation') {
+            $msg .= "⏳ <b>Registration Status:</b> Awaiting Confirmation\n\n";
+            $msg .= "📝 Please review your information and send <b>CONFIRM</b> to complete registration.";
+        } else {
+            $msg .= "⚠️ <b>Registration Status:</b> Incomplete\n\n";
+            $msg .= "📝 Please complete your registration using /register";
+        }
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    // Show KYC status
+    $msg .= "🔐 <b>KYC Verification Status:</b>\n\n";
+    
+    switch ($kycStatus) {
+        case 'approved':
+            $msg .= "✅ <b>Status:</b> Verified\n";
+            $msg .= "🎉 Your account is fully verified!\n\n";
+            $msg .= "You can now:\n";
+            $msg .= "• ➕ Create virtual cards\n";
+            $msg .= "• 💰 Deposit funds\n";
+            $msg .= "• 💳 Manage your cards";
+            break;
+            
+        case 'rejected':
+            $msg .= "❌ <b>Status:</b> Rejected\n\n";
+            $msg .= "Your KYC verification was rejected.\n\n";
+            $msg .= "📞 Please contact support for assistance:\n";
+            $msg .= "Use /support to get help.";
+            break;
+            
+        case 'pending':
+        default:
+            $msg .= "⏳ <b>Status:</b> Under Review\n\n";
+            $msg .= "Your documents are being reviewed by our compliance team.\n\n";
+            $msg .= "⏱️ <b>Typical verification time:</b> 24-48 hours\n\n";
+            $msg .= "📱 You'll receive a notification once your verification is complete.\n\n";
+            $msg .= "💡 <b>Tip:</b> Use /status anytime to check your current status.";
+            break;
+    }
+    
+    sendMessage($chatId, $msg, false);
 }
 
 // ==================== STROWALLET API ====================
