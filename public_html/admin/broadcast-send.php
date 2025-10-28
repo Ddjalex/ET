@@ -93,12 +93,55 @@ function sendTelegramRequest($url, $data) {
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: multipart/form-data']);
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
     
+    if ($curlError || $httpCode !== 200) {
+        return [
+            'success' => false,
+            'http_code' => $httpCode,
+            'response' => null,
+            'error' => $curlError ?: 'HTTP error: ' . $httpCode
+        ];
+    }
+    
+    $decoded = json_decode($response, true);
+    
+    if (!is_array($decoded)) {
+        return [
+            'success' => false,
+            'http_code' => $httpCode,
+            'response' => null,
+            'error' => 'Invalid JSON response from Telegram'
+        ];
+    }
+    
+    $isSuccess = isset($decoded['ok']) && $decoded['ok'] === true;
+    
+    if (!$isSuccess) {
+        $errorDescription = $decoded['description'] ?? 'Telegram API returned ok=false or missing ok field';
+        return [
+            'success' => false,
+            'http_code' => $httpCode,
+            'response' => $decoded,
+            'error' => $errorDescription
+        ];
+    }
+    
+    if (!isset($decoded['result'])) {
+        return [
+            'success' => false,
+            'http_code' => $httpCode,
+            'response' => $decoded,
+            'error' => 'Telegram response missing result field'
+        ];
+    }
+    
     return [
-        'success' => $httpCode === 200,
+        'success' => true,
         'http_code' => $httpCode,
-        'response' => json_decode($response, true)
+        'response' => $decoded,
+        'error' => null
     ];
 }
 
@@ -124,11 +167,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_send'])) {
         } else {
             $result = sendTelegramMessage($broadcast['telegram_channel_id'], $broadcast, $telegram_bot_token);
             
-            dbQuery("INSERT INTO broadcast_logs (broadcast_id, event_type, status, response_data) VALUES (?, ?, ?, ?)", [
+            dbQuery("INSERT INTO broadcast_logs (broadcast_id, event_type, status, response_data, error_message) VALUES (?, ?, ?, ?, ?)", [
                 $broadcast['id'],
                 'telegram_send',
                 $result['success'] ? 'success' : 'failed',
-                json_encode($result['response'])
+                json_encode($result['response'] ?? []),
+                $result['error'] ?? null
             ]);
             
             if ($result['success']) {
@@ -138,16 +182,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_send'])) {
                 if ($broadcast['pin_message'] && $telegramMessageId) {
                     $pinResult = pinTelegramMessage($broadcast['telegram_channel_id'], $telegramMessageId, $telegram_bot_token);
                     
-                    dbQuery("INSERT INTO broadcast_logs (broadcast_id, event_type, status, telegram_message_id, response_data) VALUES (?, ?, ?, ?, ?)", [
+                    dbQuery("INSERT INTO broadcast_logs (broadcast_id, event_type, status, telegram_message_id, response_data, error_message) VALUES (?, ?, ?, ?, ?, ?)", [
                         $broadcast['id'],
                         'pin_message',
                         $pinResult['success'] ? 'success' : 'failed',
                         $telegramMessageId,
-                        json_encode($pinResult['response'])
+                        json_encode($pinResult['response'] ?? []),
+                        $pinResult['error'] ?? null
                     ]);
                 }
             } else {
-                $errorMsg = $result['response']['description'] ?? 'Unknown error';
+                $errorMsg = $result['error'] ?? 'Unknown error';
             }
         }
     } else {
