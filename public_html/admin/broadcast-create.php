@@ -51,25 +51,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $buttonsJson = !empty($buttons) ? json_encode($buttons) : null;
     
-    $sendToTelegram = isset($_POST['send_to_telegram']);
-    $sendToInapp = isset($_POST['send_to_inapp']);
+    $sendToTelegram = isset($_POST['send_to_telegram']) ? 1 : 0;
+    $sendToInapp = isset($_POST['send_to_inapp']) ? 1 : 0;
     $telegramChannelId = trim($_POST['telegram_channel_id'] ?? '');
     
     $scheduleType = $_POST['schedule_type'] ?? 'draft';
     $scheduledFor = null;
-    $sendNow = false;
+    $sendNow = 0;
     $status = 'draft';
     
     if ($scheduleType === 'schedule' && !empty($_POST['scheduled_for'])) {
         $scheduledFor = $_POST['scheduled_for'];
         $status = 'scheduled';
     } elseif ($scheduleType === 'send_now') {
-        $sendNow = true;
+        $sendNow = 1;
     }
     
-    $pinMessage = isset($_POST['pin_message']);
+    $pinMessage = isset($_POST['pin_message']) ? 1 : 0;
     
-    $isGiveaway = isset($_POST['is_giveaway']);
+    $isGiveaway = isset($_POST['is_giveaway']) ? 1 : 0;
     $giveawayWinnersCount = $isGiveaway ? (int)($_POST['giveaway_winners_count'] ?? 1) : 0;
     $giveawayEndsAt = $isGiveaway && !empty($_POST['giveaway_ends_at']) ? $_POST['giveaway_ends_at'] : null;
     

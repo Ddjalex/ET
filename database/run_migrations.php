@@ -47,7 +47,8 @@ $migrations = [
     '004_fix_admin_actions_fk.sql',
     '005_create_user_registrations.sql',
     '006_add_kyc_status.sql',
-    '007_create_broadcaster_tables.sql'
+    '007_create_broadcaster_tables.sql',
+    '008_allow_null_telegram_id.sql'
 ];
 
 foreach ($migrations as $migration) {
