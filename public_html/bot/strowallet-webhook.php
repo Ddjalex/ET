@@ -131,7 +131,7 @@ function handleKYCUpdated($data) {
         $whereClause = $email ? "email = ?" : "strowallet_customer_id = ?";
         $whereValue = $email ?: $customerId;
         
-        $stmt = $pdo->prepare("SELECT telegram_user_id, first_name, last_name FROM user_registrations WHERE $whereClause LIMIT 1");
+        $stmt = $pdo->prepare("SELECT telegram_user_id, first_name, last_name, kyc_status as old_status FROM user_registrations WHERE $whereClause LIMIT 1");
         $stmt->execute([$whereValue]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -139,6 +139,10 @@ function handleKYCUpdated($data) {
             logEvent('kyc_update_no_user', ['email' => $email, 'customer_id' => $customerId]);
             return;
         }
+        
+        $oldStatus = $user['old_status'] ?? 'pending';
+        $telegramUserId = $user['telegram_user_id'];
+        $fullName = $user['first_name'] . ' ' . $user['last_name'];
         
         // Update KYC status in user_registrations table
         $updateStmt = $pdo->prepare("
@@ -165,23 +169,27 @@ function handleKYCUpdated($data) {
                 UPDATE users 
                 SET kyc_status = ?, 
                     strow_customer_id = COALESCE(?, strow_customer_id),
+                    kyc_approved_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE kyc_approved_at END,
+                    kyc_rejected_at = CASE WHEN ? = 'rejected' THEN CURRENT_TIMESTAMP ELSE kyc_rejected_at END,
                     updated_at = CURRENT_TIMESTAMP 
                 WHERE $usersWhereClause
             ");
-            $updateUsersStmt->execute([$dbStatus, $customerId, $usersWhereValue]);
+            $updateUsersStmt->execute([$dbStatus, $customerId, $dbStatus, $dbStatus, $usersWhereValue]);
         }
         
-        $telegramUserId = $user['telegram_user_id'];
-        $fullName = $user['first_name'] . ' ' . $user['last_name'];
-        
-        // Notify user based on status
-        if ($dbStatus === 'approved') {
-            notifyUserKYCApproved($telegramUserId);
-        } elseif ($dbStatus === 'rejected') {
-            notifyUserKYCRejected($telegramUserId, $data['rejection_reason'] ?? 'Not specified');
+        // Send notification to user if status changed
+        if ($oldStatus !== $dbStatus) {
+            if ($dbStatus === 'approved') {
+                notifyUserKYCApproved($telegramUserId);
+                logEvent('kyc_approved_notification_sent', ['telegram_id' => $telegramUserId, 'name' => $fullName]);
+            } elseif ($dbStatus === 'rejected') {
+                $reason = $data['rejection_reason'] ?? $data['reason'] ?? 'Not specified';
+                notifyUserKYCRejected($telegramUserId, $reason);
+                logEvent('kyc_rejected_notification_sent', ['telegram_id' => $telegramUserId, 'name' => $fullName, 'reason' => $reason]);
+            }
         }
         
-        // Notify admin
+        // Notify admin of status change
         if (!empty(ADMIN_CHAT_ID)) {
             $statusEmoji = match($dbStatus) {
                 'approved' => '✅',

@@ -1877,9 +1877,78 @@ function markUserRegistrationComplete($userId, $customerId = '', $kycStatus = 'p
                 updated_at = CURRENT_TIMESTAMP 
             WHERE telegram_user_id = ?
         ");
-        return $stmt->execute([$customerId, $kycStatus, $userId]);
+        $success = $stmt->execute([$customerId, $kycStatus, $userId]);
+        
+        if ($success) {
+            copyUserToUsersTable($userId);
+        }
+        
+        return $success;
     } catch (PDOException $e) {
         error_log("Error marking registration complete: " . $e->getMessage());
+        return false;
+    }
+}
+
+function copyUserToUsersTable($userId) {
+    $pdo = getDBConnection();
+    if (!$pdo) return false;
+    
+    try {
+        $userData = getUserRegistrationData($userId);
+        if (!$userData) {
+            error_log("Cannot copy user to users table: user data not found for $userId");
+            return false;
+        }
+        
+        $checkStmt = $pdo->prepare("SELECT id FROM users WHERE telegram_id = ?");
+        $checkStmt->execute([$userId]);
+        if ($checkStmt->fetch()) {
+            error_log("User already exists in users table: $userId");
+            return true;
+        }
+        
+        $idImageUrl = $userData['id_front_photo_url'] ?? $userData['id_image_url'] ?? '';
+        $userPhotoUrl = $userData['selfie_photo_url'] ?? $userData['user_photo_url'] ?? '';
+        
+        $stmt = $pdo->prepare("
+            INSERT INTO users (
+                telegram_id, email, phone, first_name, last_name,
+                kyc_status, kyc_submitted_at, strow_customer_id,
+                id_type, id_number, id_image_url, user_photo_url,
+                address_line1, address_city, address_state, address_zip, address_country,
+                house_number, date_of_birth, status, created_at, updated_at
+            ) VALUES (
+                ?, ?, ?, ?, ?,
+                ?, CURRENT_TIMESTAMP, ?,
+                ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+            )
+        ");
+        
+        return $stmt->execute([
+            $userId,
+            $userData['email'],
+            $userData['phone'],
+            $userData['first_name'],
+            $userData['last_name'],
+            $userData['kyc_status'] ?? 'pending',
+            $userData['strowallet_customer_id'] ?? '',
+            $userData['id_type'],
+            $userData['id_number'],
+            $idImageUrl,
+            $userPhotoUrl,
+            $userData['address_line1'],
+            $userData['address_city'] ?? $userData['city'] ?? '',
+            $userData['address_state'] ?? $userData['state'] ?? '',
+            $userData['address_zip'] ?? $userData['zip_code'] ?? '',
+            $userData['address_country'],
+            $userData['house_number'],
+            $userData['date_of_birth']
+        ]);
+    } catch (PDOException $e) {
+        error_log("Error copying user to users table: " . $e->getMessage());
         return false;
     }
 }
