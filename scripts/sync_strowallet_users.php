@@ -13,11 +13,25 @@ require_once __DIR__ . '/../secrets/load_env.php';
 
 // StroWallet API Configuration
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROW_PUBLIC_KEY', getenv('STROWALLET_API_KEY') ?: getenv('STROW_PUBLIC_KEY') ?: '');
-define('STROW_SECRET_KEY', getenv('STROWALLET_WEBHOOK_SECRET') ?: getenv('STROW_SECRET_KEY') ?: '');
+define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
+define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
 
 if (empty(STROW_PUBLIC_KEY)) {
-    die("ERROR: STROWALLET_API_KEY not found in environment variables\n");
+    die("ERROR: STROW_PUBLIC_KEY not found in environment variables\n");
+}
+
+// ==================== CONFIGURE YOUR EXISTING CUSTOMERS HERE ====================
+// Add the email addresses of customers already registered in StroWallet
+$existingCustomerEmails = [
+    'test1761389150@example.com',
+    'walmesaged@gmail.com',
+    'wondimualmasaged@gmail.com',
+    // Add more email addresses here as needed
+];
+// ================================================================================
+
+if (empty($existingCustomerEmails)) {
+    die("ERROR: No customer emails configured. Please edit this script and add customer emails.\n");
 }
 
 // Get database connection
@@ -79,42 +93,33 @@ function mapKYCStatus($strowStatus) {
     };
 }
 
-echo "🔄 Fetching all customers from StroWallet API...\n";
+echo "🔄 Fetching " . count($existingCustomerEmails) . " customer(s) from StroWallet API...\n\n";
 
-// Fetch all cardholders/customers from StroWallet
-$result = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY, 'GET');
-
-if ($result['http_code'] !== 200) {
-    die("ERROR: Failed to fetch customers from StroWallet API (HTTP {$result['http_code']})\n");
-}
-
-$response = $result['data'];
 $customers = [];
 
-// Handle different response formats
-if (isset($response['data']) && is_array($response['data'])) {
-    // Response has 'data' wrapper
-    if (isset($response['data'][0])) {
-        // Array of customers
-        $customers = $response['data'];
+foreach ($existingCustomerEmails as $email) {
+    echo "  → Fetching: {$email}...";
+    
+    $result = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($email), 'GET');
+    
+    if ($result['http_code'] === 200 && isset($result['data']['data'])) {
+        $customerData = $result['data']['data'];
+        $customers[] = $customerData;
+        echo " ✓\n";
     } else {
-        // Single customer
-        $customers = [$response['data']];
+        echo " ⚠️  Not found (HTTP {$result['http_code']})\n";
     }
-} elseif (isset($response['customers']) && is_array($response['customers'])) {
-    $customers = $response['customers'];
-} elseif (is_array($response) && isset($response[0])) {
-    // Direct array of customers
-    $customers = $response;
+    
+    // Small delay to avoid rate limiting
+    usleep(200000); // 0.2 seconds
 }
 
 if (empty($customers)) {
-    echo "⚠️  No customers found in StroWallet API\n";
-    echo "Response: " . json_encode($response, JSON_PRETTY_PRINT) . "\n";
+    echo "\n⚠️  No customers found in StroWallet API\n";
     exit(0);
 }
 
-echo "✓ Found " . count($customers) . " customer(s) in StroWallet\n\n";
+echo "\n✓ Successfully fetched " . count($customers) . " customer(s)\n\n";
 
 $imported = 0;
 $updated = 0;
