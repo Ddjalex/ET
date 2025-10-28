@@ -1863,17 +1863,7 @@ function getUserRegistrationData($userId) {
     if (!$pdo) return null;
     
     try {
-        // First, check user_registrations table (for bot-registered users)
-        $stmt = $pdo->prepare("SELECT * FROM user_registrations WHERE telegram_user_id = ?");
-        $stmt->execute([$userId]);
-        $regData = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($regData) {
-            return $regData;
-        }
-        
-        // If not found, check users table (for StroWallet-synced users)
-        // Only match by telegram_id to ensure we get the right user
+        // First, check users table (for StroWallet-synced/imported users) - prioritize this
         $stmt = $pdo->prepare("SELECT * FROM users WHERE telegram_id = ? LIMIT 1");
         $stmt->execute([$userId]);
         $userData = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1891,6 +1881,15 @@ function getUserRegistrationData($userId) {
                 'phone' => $userData['phone'],
                 'strow_customer_id' => $userData['strow_customer_id'] ?? null
             ];
+        }
+        
+        // If not found in users table, check user_registrations table (for bot-registered users)
+        $stmt = $pdo->prepare("SELECT * FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        $regData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($regData) {
+            return $regData;
         }
         
         return null;

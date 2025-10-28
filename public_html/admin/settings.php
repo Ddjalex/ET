@@ -44,6 +44,64 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                 
                 $message = 'Deposit fee updated successfully!';
                 $messageType = 'alert-success';
+                
+            } elseif ($action === 'add_deposit_account') {
+                $method = trim($_POST['payment_method']);
+                $accountName = trim($_POST['account_name']);
+                $accountNumber = trim($_POST['account_number']);
+                $instructions = trim($_POST['instructions'] ?? '');
+                
+                // Get existing accounts
+                $accountsData = dbFetchOne("SELECT value FROM settings WHERE key = 'deposit_accounts'");
+                $accounts = $accountsData ? json_decode($accountsData['value'], true) : [];
+                
+                // Add new account
+                $accounts[] = [
+                    'id' => uniqid(),
+                    'method' => $method,
+                    'account_name' => $accountName,
+                    'account_number' => $accountNumber,
+                    'instructions' => $instructions,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Save to database
+                $value = json_encode($accounts);
+                $existing = dbFetchOne("SELECT id FROM settings WHERE key = 'deposit_accounts'");
+                if ($existing) {
+                    dbQuery("UPDATE settings SET value = ?, updated_at = NOW(), updated_by = ? WHERE key = 'deposit_accounts'", [$value, $adminId]);
+                } else {
+                    dbQuery("INSERT INTO settings (key, value, updated_by) VALUES ('deposit_accounts', ?, ?)", [$value, $adminId]);
+                }
+                
+                dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, action_description, payload) VALUES (?, 'add_setting', 'settings', 'Added deposit account', ?)",
+                    [$adminId, json_encode(['method' => $method, 'account_name' => $accountName])]);
+                
+                $message = 'Deposit account added successfully!';
+                $messageType = 'alert-success';
+                
+            } elseif ($action === 'delete_deposit_account') {
+                $accountId = $_POST['account_id'];
+                
+                // Get existing accounts
+                $accountsData = dbFetchOne("SELECT value FROM settings WHERE key = 'deposit_accounts'");
+                $accounts = $accountsData ? json_decode($accountsData['value'], true) : [];
+                
+                // Remove the account
+                $accounts = array_filter($accounts, function($acc) use ($accountId) {
+                    return $acc['id'] !== $accountId;
+                });
+                $accounts = array_values($accounts); // Re-index array
+                
+                // Save to database
+                $value = json_encode($accounts);
+                dbQuery("UPDATE settings SET value = ?, updated_at = NOW(), updated_by = ? WHERE key = 'deposit_accounts'", [$value, $adminId]);
+                
+                dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, action_description, payload) VALUES (?, 'delete_setting', 'settings', 'Deleted deposit account', ?)",
+                    [$adminId, json_encode(['account_id' => $accountId])]);
+                
+                $message = 'Deposit account deleted successfully!';
+                $messageType = 'alert-success';
             }
         } catch (Exception $e) {
             $message = 'Error: ' . $e->getMessage();
@@ -61,6 +119,7 @@ foreach ($settingsData as $row) {
 
 $exchangeRate = $settings['exchange_rate_usd_to_etb']['rate'] ?? 130.50;
 $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00];
+$depositAccounts = $settings['deposit_accounts'] ?? [];
 ?>
 
 <style>
@@ -285,6 +344,107 @@ $depositFee = $settings['deposit_fee'] ?? ['percentage' => 0.00, 'flat' => 0.00]
             
             <button type="submit" class="btn btn-primary">💾 Update Deposit Fee</button>
         </form>
+    </div>
+    
+    <div class="card">
+        <h3>🏦 Deposit Payment Accounts</h3>
+        <p style="color: #94a3b8; margin-bottom: 20px; font-size: 14px;">
+            Configure payment methods that users can use to deposit ETB. These will be shown in the bot when users request a deposit.
+        </p>
+        
+        <?php if (count($depositAccounts) > 0): ?>
+        <div style="margin-bottom: 30px;">
+            <h4 style="margin-bottom: 15px; color: #cbd5e1; font-size: 16px;">📋 Active Payment Methods</h4>
+            <div style="display: grid; gap: 15px;">
+                <?php foreach ($depositAccounts as $account): ?>
+                <div style="background: rgba(30, 41, 59, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; padding: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                        <div>
+                            <h5 style="margin: 0 0 8px 0; color: #f1f5f9; font-size: 15px;">
+                                💳 <?php echo htmlspecialchars($account['method']); ?>
+                            </h5>
+                            <p style="margin: 0 0 5px 0; color: #94a3b8; font-size: 13px;">
+                                <strong style="color: #cbd5e1;">Name:</strong> <?php echo htmlspecialchars($account['account_name']); ?>
+                            </p>
+                            <p style="margin: 0 0 5px 0; color: #94a3b8; font-size: 13px;">
+                                <strong style="color: #cbd5e1;">Number:</strong> <code style="background: rgba(59, 130, 246, 0.1); padding: 2px 6px; border-radius: 4px; color: #60a5fa;"><?php echo htmlspecialchars($account['account_number']); ?></code>
+                            </p>
+                            <?php if (!empty($account['instructions'])): ?>
+                            <p style="margin: 8px 0 0 0; color: #94a3b8; font-size: 12px; font-style: italic;">
+                                📝 <?php echo htmlspecialchars($account['instructions']); ?>
+                            </p>
+                            <?php endif; ?>
+                        </div>
+                        <form method="POST" style="margin: 0;" onsubmit="return confirm('Delete this payment method?');">
+                            <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                            <input type="hidden" name="action" value="delete_deposit_account">
+                            <input type="hidden" name="account_id" value="<?php echo htmlspecialchars($account['id']); ?>">
+                            <button type="submit" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;">
+                                🗑️ Delete
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php else: ?>
+        <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 30px; text-align: center; color: #fbbf24;">
+            ⚠️ No payment methods configured yet. Add your first payment method below.
+        </div>
+        <?php endif; ?>
+        
+        <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 8px; padding: 20px;">
+            <h4 style="margin: 0 0 15px 0; color: #60a5fa; font-size: 15px;">➕ Add New Payment Method</h4>
+            <form method="POST">
+                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                <input type="hidden" name="action" value="add_deposit_account">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="payment_method" style="display: block; margin-bottom: 6px; font-weight: 600; color: #f1f5f9; font-size: 13px;">
+                        Payment Method Name
+                    </label>
+                    <select id="payment_method" name="payment_method" required class="form-control" style="background: rgba(30, 41, 59, 0.8);">
+                        <option value="">Select payment method...</option>
+                        <option value="Bank Transfer">🏦 Bank Transfer</option>
+                        <option value="TeleBirr">📱 TeleBirr</option>
+                        <option value="CBE Birr">💳 CBE Birr</option>
+                        <option value="M-PESA">💰 M-PESA</option>
+                        <option value="Awash Wallet">🏦 Awash Wallet</option>
+                        <option value="Other">📋 Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="account_name" style="display: block; margin-bottom: 6px; font-weight: 600; color: #f1f5f9; font-size: 13px;">
+                        Account Holder Name
+                    </label>
+                    <input type="text" id="account_name" name="account_name" required 
+                           placeholder="e.g., John Doe or Business Name"
+                           class="form-control" style="background: rgba(30, 41, 59, 0.8);">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label for="account_number" style="display: block; margin-bottom: 6px; font-weight: 600; color: #f1f5f9; font-size: 13px;">
+                        Account Number / Phone Number
+                    </label>
+                    <input type="text" id="account_number" name="account_number" required 
+                           placeholder="e.g., 1000123456789 or +251912345678"
+                           class="form-control" style="background: rgba(30, 41, 59, 0.8);">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="instructions" style="display: block; margin-bottom: 6px; font-weight: 600; color: #f1f5f9; font-size: 13px;">
+                        Additional Instructions (Optional)
+                    </label>
+                    <textarea id="instructions" name="instructions" rows="2" 
+                              placeholder="e.g., Use reference code: CARD2025"
+                              class="form-control" style="background: rgba(30, 41, 59, 0.8); resize: vertical;"></textarea>
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%;">➕ Add Payment Method</button>
+            </form>
+        </div>
     </div>
 </div>
 
