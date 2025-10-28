@@ -9,8 +9,8 @@ $messageType = '';
 
 // StroWallet API Configuration
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROWALLET_API_KEY', getenv('STROWALLET_API_KEY') ?: '');
-define('STROWALLET_SECRET', getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
+define('STROWALLET_API_KEY', getenv('STROWALLET_API_KEY') ?: getenv('STROW_PUBLIC_KEY') ?: '');
+define('STROWALLET_SECRET', getenv('STROWALLET_WEBHOOK_SECRET') ?: getenv('STROW_SECRET_KEY') ?: '');
 
 // Function to call StroWallet API with public_key parameter (as per StroWallet API docs)
 function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
