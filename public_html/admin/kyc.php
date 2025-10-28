@@ -9,26 +9,46 @@ $messageType = '';
 
 // StroWallet API Configuration
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
-define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
+define('STROWALLET_API_KEY', getenv('STROWALLET_API_KEY') ?: '');
+define('STROWALLET_SECRET', getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
 
-// Function to call StroWallet API
+// Function to call StroWallet API with Bearer token authentication (same as webhook.php)
 function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
     $url = STROW_BASE . $endpoint;
+    
+    // Prepare headers with Authorization Bearer token
+    $headers = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'Authorization: Bearer ' . STROWALLET_SECRET
+    ];
     
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        if (!empty($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        }
     }
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
+    
+    if ($curlError) {
+        return [
+            'http_code' => 0,
+            'data' => null,
+            'raw' => null,
+            'error' => $curlError
+        ];
+    }
     
     return [
         'http_code' => $httpCode,
@@ -43,9 +63,13 @@ if (isset($_GET['sync_user'])) {
     $user = dbFetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
     
     if ($user && !empty($user['email'])) {
-        $result = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($user['email']), 'GET');
+        // Use Bearer token authentication (no public_key in URL)
+        $result = callStroWalletAPI('/bitvcard/getcardholder/?customerEmail=' . urlencode($user['email']), 'GET');
         
-        if ($result['http_code'] === 200 && isset($result['data']['data'])) {
+        if (isset($result['error'])) {
+            $message = "⚠️ Network error: " . $result['error'];
+            $messageType = 'alert-warning';
+        } elseif ($result['http_code'] === 200 && isset($result['data']['data'])) {
             $strowData = $result['data']['data'];
             $kycStatus = strtolower($strowData['kycStatus'] ?? 'pending');
             
@@ -61,8 +85,11 @@ if (isset($_GET['sync_user'])) {
             
             $message = "✅ KYC status synced from StroWallet: " . ucfirst($kycStatus);
             $messageType = 'alert-success';
-        } else {
-            $message = "⚠️ Could not fetch KYC status from StroWallet API";
+        } elseif ($result['http_code'] === 401 || $result['http_code'] === 403) {
+            $message = "⚠️ Authentication failed - check STROWALLET_WEBHOOK_SECRET";
+            $messageType = 'alert-warning';
+        } elseif (!isset($result['error'])) {
+            $message = "⚠️ Could not fetch KYC status from StroWallet API (HTTP {$result['http_code']})";
             $messageType = 'alert-warning';
         }
     }

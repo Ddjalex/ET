@@ -13,11 +13,11 @@ require_once __DIR__ . '/../secrets/load_env.php';
 
 // StroWallet API Configuration
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROW_PUBLIC_KEY', getenv('STROW_PUBLIC_KEY') ?: '');
-define('STROW_SECRET_KEY', getenv('STROW_SECRET_KEY') ?: '');
+define('STROWALLET_API_KEY', getenv('STROWALLET_API_KEY') ?: '');
+define('STROWALLET_SECRET', getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
 
-if (empty(STROW_PUBLIC_KEY)) {
-    die("ERROR: STROW_PUBLIC_KEY not found in environment variables\n");
+if (empty(STROWALLET_SECRET)) {
+    die("ERROR: STROWALLET_WEBHOOK_SECRET not found in environment variables\n");
 }
 
 // ==================== CONFIGURE YOUR EXISTING CUSTOMERS HERE ====================
@@ -55,24 +55,44 @@ try {
 }
 
 /**
- * Call StroWallet API
+ * Call StroWallet API with Bearer token authentication
  */
 function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
     $url = STROW_BASE . $endpoint;
     
+    // Prepare headers with Authorization Bearer token (same as webhook.php)
+    $headers = [
+        'Content-Type: application/json',
+        'Accept: application/json',
+        'Authorization: Bearer ' . STROWALLET_SECRET
+    ];
+    
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($ch, CURLOPT_TIMEOUT, 30);
     
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        if (!empty($data)) {
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        }
     }
     
     $response = curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
     curl_close($ch);
+    
+    if ($curlError) {
+        return [
+            'http_code' => 0,
+            'data' => null,
+            'raw' => null,
+            'error' => $curlError
+        ];
+    }
     
     return [
         'http_code' => $httpCode,
@@ -100,14 +120,20 @@ $customers = [];
 foreach ($existingCustomerEmails as $email) {
     echo "  → Fetching: {$email}...";
     
-    $result = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($email), 'GET');
+    // Use Bearer token authentication (no public_key in URL)
+    $result = callStroWalletAPI('/bitvcard/getcardholder/?customerEmail=' . urlencode($email), 'GET');
     
-    if ($result['http_code'] === 200 && isset($result['data']['data'])) {
+    if (isset($result['error'])) {
+        echo " ⚠️  Network error: {$result['error']}\n";
+    } elseif ($result['http_code'] === 200 && isset($result['data']['data'])) {
         $customerData = $result['data']['data'];
         $customers[] = $customerData;
         echo " ✓\n";
     } else {
         echo " ⚠️  Not found (HTTP {$result['http_code']})\n";
+        if ($result['http_code'] === 401 || $result['http_code'] === 403) {
+            echo "     Auth error - check STROWALLET_WEBHOOK_SECRET\n";
+        }
     }
     
     // Small delay to avoid rate limiting
