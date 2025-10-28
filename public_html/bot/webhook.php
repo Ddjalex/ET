@@ -125,9 +125,9 @@ $userState = getUserRegistrationState($userId);
 if ($text === '/cancel') {
     if ($userState && $userState !== 'idle' && $userState !== 'completed') {
         updateUserRegistrationState($userId, 'idle');
-        sendMessage($chatId, "❌ Registration cancelled. You can start again with /register", true);
+        sendMessage($chatId, "❌ Registration cancelled. You can start again with /register", false);
     } else {
-        sendMessage($chatId, "Nothing to cancel.", true);
+        sendMessage($chatId, "Nothing to cancel.", false);
     }
     http_response_code(200);
     echo 'OK';
@@ -140,7 +140,7 @@ if ($text === '/continue') {
         // Re-prompt for the current field
         promptForCurrentField($chatId, $userState, $userId);
     } else {
-        sendMessage($chatId, "Nothing to continue. Use /register to start.", true);
+        sendMessage($chatId, "Nothing to continue. Use /register to start.", false);
     }
     http_response_code(200);
     echo 'OK';
@@ -197,13 +197,13 @@ if ($text === '/quickregister') {
 } elseif ($text === '/deposit_trc20') {
     handleDepositTRC20($chatId, $userId);
 } elseif ($text === '/invite' || $text === '💸 Invite Friends') {
-    handleInvite($chatId);
+    handleInvite($chatId, $userId);
 } elseif ($text === '/support' || $text === '🧑‍💻 Support') {
-    handleSupport($chatId);
+    handleSupport($chatId, $userId);
 } elseif ($text === '/status' || $text === '/checkkyc' || $text === '📋 Check Status') {
     handleCheckStatus($chatId, $userId);
 } else {
-    sendMessage($chatId, "ℹ️ Unknown command. Please use the menu buttons below.", true);
+    sendMessage($chatId, "ℹ️ Unknown command. Please use the menu buttons below.", true, $userId);
 }
 
 http_response_code(200);
@@ -230,7 +230,7 @@ function handleCallbackQuery($callbackQuery) {
     // For user callbacks, check registration status
     $userData = getUserRegistrationData($userId);
     if (!$userData) {
-        sendMessage($chatId, "❌ Please register first using /register", true);
+        sendMessage($chatId, "❌ Please register first using /register", false);
         return;
     }
     
@@ -701,21 +701,21 @@ function handleCreateCard($chatId, $userId) {
             $msg .= "   • Go to Card Holders → Create New\n";
             $msg .= "   • Complete KYC verification\n\n";
             $msg .= "3️⃣ <b>View All Options:</b> /register";
-            sendMessage($chatId, $msg, true);
+            sendMessage($chatId, $msg, true, $userId);
         } elseif ($httpCode === 401 || $httpCode === 403) {
             // Auth error
             $msg = "❌ <b>Authentication Error</b>\n\n";
             $msg .= "StroWallet API authentication failed.\n\n";
             $msg .= "This is a configuration issue. Please contact the administrator.\n\n";
             $msg .= "🔍 <b>Error Details:</b> " . ($customerCheck['error'] ?? 'Auth failed');
-            sendMessage($chatId, $msg, true);
+            sendMessage($chatId, $msg, true, $userId);
         } else {
             // Network or server error
             $msg = "❌ <b>Service Error</b>\n\n";
             $msg .= "Unable to connect to StroWallet API.\n\n";
             $msg .= "Please try again in a few moments.\n\n";
             $msg .= "🔍 <b>Error:</b> " . ($customerCheck['error'] ?? 'Unknown error');
-            sendMessage($chatId, $msg, true);
+            sendMessage($chatId, $msg, true, $userId);
         }
         return;
     }
@@ -759,11 +759,11 @@ function handleCreateCard($chatId, $userId) {
         }
         $msg .= "ℹ️ Your new virtual card is ready to use!";
         
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, true, $userId);
     } else {
         $msg = "✅ Card creation response received!\n\n";
         $msg .= "Response: " . json_encode($result, JSON_PRETTY_PRINT);
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, true, $userId);
     }
 }
 
@@ -801,12 +801,12 @@ function handleMyCards($chatId, $userId) {
         }
         
         $msg .= "\n━━━━━━━━━━━━━━━━━━";
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, true, $userId);
     } else {
         $msg = "📪 <b>No Cards Found</b>\n\n";
         $msg .= "You don't have any virtual cards yet.\n\n";
         $msg .= "💡 Use <b>➕ Create Card</b> to get started!";
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, true, $userId);
     }
 }
 
@@ -860,7 +860,7 @@ function handleUserInfo($chatId, $userId) {
         $msg .= "Don't miss out on these fantastic features!";
     }
     
-    sendMessage($chatId, $msg, true);
+    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleWallet($chatId, $userId) {
@@ -897,7 +897,7 @@ function handleWallet($chatId, $userId) {
     $msg .= "📥 To deposit USDT (TRC20), use:\n";
     $msg .= "/deposit_trc20";
     
-    sendMessage($chatId, $msg, true);
+    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleDepositTRC20($chatId, $userId) {
@@ -927,22 +927,22 @@ function handleDepositTRC20($chatId, $userId) {
         $msg .= "• Funds will appear after network confirmation\n\n";
         $msg .= "💡 Tap the address to copy it!";
         
-        sendMessage($chatId, $msg, true);
+        sendMessage($chatId, $msg, true, $userId);
     } else {
         sendMessage($chatId, "❌ Unable to generate deposit address. Please try again later.", true);
     }
 }
 
-function handleInvite($chatId) {
+function handleInvite($chatId, $userId = null) {
     $msg = REFERRAL_TEXT;
     if (empty($msg)) {
         $msg = "💸 <b>Invite Friends & Earn Rewards!</b>\n\n";
         $msg .= "Share your referral link and earn points when your friends join!";
     }
-    sendMessage($chatId, $msg, true);
+    sendMessage($chatId, $msg, true, $userId);
 }
 
-function handleSupport($chatId) {
+function handleSupport($chatId, $userId = null) {
     $msg = "🧑‍💻 <b>Need Help?</b>\n\n";
     $msg .= "Our support team is here to assist you!\n\n";
     
@@ -952,7 +952,7 @@ function handleSupport($chatId) {
         $msg .= "Please contact our support team for assistance.";
     }
     
-    sendMessage($chatId, $msg, true);
+    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleCheckStatus($chatId, $userId) {
@@ -1163,9 +1163,32 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = [], $useAdminKey 
 
 // ==================== TELEGRAM API ====================
 
-function sendMessage($chatId, $text, $showKeyboard = false) {
+/**
+ * Check if reply keyboard should be shown to user
+ * Keyboard only shows if user's KYC is approved
+ */
+function shouldShowKeyboard($userId) {
+    if (!$userId) {
+        return false;
+    }
+    
+    $userData = getUserRegistrationData($userId);
+    if (!$userData || !$userData['is_registered']) {
+        return false;
+    }
+    
+    $kycStatus = $userData['kyc_status'] ?? 'pending';
+    return $kycStatus === 'approved';
+}
+
+function sendMessage($chatId, $text, $showKeyboard = false, $userId = null) {
     $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
     error_log("SendMessage URL: " . substr($url, 0, 50) . "... (token length: " . strlen(BOT_TOKEN) . ")");
+    
+    // Auto-determine keyboard display if userId provided
+    if ($userId !== null && $showKeyboard === true) {
+        $showKeyboard = shouldShowKeyboard($userId);
+    }
     
     $payload = [
         'chat_id' => $chatId,
@@ -1959,8 +1982,55 @@ function createStroWalletCustomerFromDB($userId) {
         // Update database with StroWallet customer ID
         $db = getDBConnection();
         if ($db) {
+            // Update user_registrations table
             $stmt = $db->prepare("UPDATE user_registrations SET strowallet_customer_id = ?, kyc_status = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
             $stmt->execute([$customerId, 'pending', $userId]);
+            
+            // Also create/update record in users table for admin panel
+            // Check if user already exists in users table
+            $checkStmt = $db->prepare("SELECT id FROM users WHERE telegram_id = ? LIMIT 1");
+            $checkStmt->execute([$userId]);
+            $existingUser = $checkStmt->fetch();
+            
+            if ($existingUser) {
+                // Update existing user
+                $updateStmt = $db->prepare("
+                    UPDATE users SET 
+                        email = ?, phone = ?, first_name = ?, last_name = ?,
+                        date_of_birth = ?, house_number = ?, address_line1 = ?,
+                        address_city = ?, address_state = ?, address_zip = ?, address_country = ?,
+                        id_type = ?, id_number = ?, id_image_url = ?, user_photo_url = ?,
+                        kyc_status = ?, strow_customer_id = ?, kyc_submitted_at = CURRENT_TIMESTAMP,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE telegram_id = ?
+                ");
+                $updateStmt->execute([
+                    $userData['email'], $userData['phone'], $userData['first_name'], $userData['last_name'],
+                    $userData['date_of_birth'], $userData['house_number'], $userData['address_line1'],
+                    $userData['address_city'], $userData['address_state'], $userData['address_zip'], $userData['address_country'],
+                    $userData['id_type'], $userData['id_number'], $idImageUrl, $userPhotoUrl,
+                    'pending', $customerId, $userId
+                ]);
+                error_log("Updated existing user in users table for telegram_id: $userId");
+            } else {
+                // Insert new user
+                $insertStmt = $db->prepare("
+                    INSERT INTO users (
+                        telegram_id, email, phone, first_name, last_name, date_of_birth,
+                        house_number, address_line1, address_city, address_state, address_zip, address_country,
+                        id_type, id_number, id_image_url, user_photo_url,
+                        kyc_status, strow_customer_id, kyc_submitted_at, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ");
+                $insertStmt->execute([
+                    $userId, $userData['email'], $userData['phone'], $userData['first_name'], $userData['last_name'],
+                    $userData['date_of_birth'], $userData['house_number'], $userData['address_line1'],
+                    $userData['address_city'], $userData['address_state'], $userData['address_zip'], $userData['address_country'],
+                    $userData['id_type'], $userData['id_number'], $idImageUrl, $userPhotoUrl,
+                    'pending', $customerId
+                ]);
+                error_log("Created new user in users table for telegram_id: $userId");
+            }
         }
     } else {
         error_log("WARNING: Customer created but no ID returned. Response: " . json_encode($result));

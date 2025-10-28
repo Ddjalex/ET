@@ -225,14 +225,11 @@ function handleKYCRejected($data) {
 function notifyUserKYCApproved($telegramUserId) {
     $msg = "🎉 <b>KYC Approved!</b>\n\n";
     $msg .= "✅ Your identity verification has been approved.\n\n";
-    $msg .= "You can now create virtual cards!\n\n";
-    $msg .= "👇 Click the button below to get started:";
+    $msg .= "You can now create virtual cards and use all features!\n\n";
+    $msg .= "📱 Use the menu below to get started:";
     
-    // Send message with inline button
-    sendTelegramMessageWithButton($telegramUserId, $msg, [
-        'text' => '➕ Create Card',
-        'callback_data' => 'create_card'
-    ]);
+    // Send message WITH reply keyboard (menu buttons)
+    sendTelegramMessageWithKeyboard($telegramUserId, $msg);
 }
 
 function notifyUserKYCRejected($telegramUserId, $reason) {
@@ -275,6 +272,44 @@ function sendTelegramMessage($chatId, $text) {
         'chat_id' => $chatId,
         'text' => $text,
         'parse_mode' => 'HTML'
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    curl_close($ch);
+    
+    return $response;
+}
+
+function sendTelegramMessageWithKeyboard($chatId, $text) {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'keyboard' => [
+                [
+                    ['text' => '➕ Create Card'],
+                    ['text' => '💳 My Cards']
+                ],
+                [
+                    ['text' => '👤 User Info'],
+                    ['text' => '💰 Wallet']
+                ],
+                [
+                    ['text' => '💸 Invite Friends'],
+                    ['text' => '🧑‍💻 Support']
+                ]
+            ],
+            'resize_keyboard' => true,
+            'is_persistent' => true
+        ]
     ];
     
     $ch = curl_init($url);
