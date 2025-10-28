@@ -116,7 +116,7 @@ function handleKYCUpdated($data) {
     
     // Map StroWallet status to database status
     $dbStatus = match($kycStatus) {
-        'verified', 'approved' => 'approved',
+        'verified', 'approved', 'high kyc', 'low kyc' => 'approved',
         'rejected', 'failed' => 'rejected',
         default => 'pending'
     };
@@ -127,7 +127,7 @@ function handleKYCUpdated($data) {
     
     // Update user KYC status in database
     try {
-        // Find user by email or customer ID
+        // Find user by email or customer ID in user_registrations table
         $whereClause = $email ? "email = ?" : "strowallet_customer_id = ?";
         $whereValue = $email ?: $customerId;
         
@@ -140,7 +140,7 @@ function handleKYCUpdated($data) {
             return;
         }
         
-        // Update KYC status and persist customer ID
+        // Update KYC status in user_registrations table
         $updateStmt = $pdo->prepare("
             UPDATE user_registrations 
             SET kyc_status = ?, 
@@ -149,6 +149,27 @@ function handleKYCUpdated($data) {
             WHERE $whereClause
         ");
         $updateStmt->execute([$dbStatus, $customerId, $whereValue]);
+        
+        // ALSO update the users table (used by admin panel)
+        $usersWhereClause = $email ? "email = ?" : "strow_customer_id = ?";
+        $usersWhereValue = $email ?: $customerId;
+        
+        // Check if user exists in users table
+        $checkUser = $pdo->prepare("SELECT id FROM users WHERE $usersWhereClause LIMIT 1");
+        $checkUser->execute([$usersWhereValue]);
+        $existingUser = $checkUser->fetch(PDO::FETCH_ASSOC);
+        
+        if ($existingUser) {
+            // Update existing user in users table
+            $updateUsersStmt = $pdo->prepare("
+                UPDATE users 
+                SET kyc_status = ?, 
+                    strow_customer_id = COALESCE(?, strow_customer_id),
+                    updated_at = CURRENT_TIMESTAMP 
+                WHERE $usersWhereClause
+            ");
+            $updateUsersStmt->execute([$dbStatus, $customerId, $usersWhereValue]);
+        }
         
         $telegramUserId = $user['telegram_user_id'];
         $fullName = $user['first_name'] . ' ' . $user['last_name'];
@@ -172,11 +193,18 @@ function handleKYCUpdated($data) {
             $msg .= "👤 <b>User:</b> {$fullName}\n";
             $msg .= "📧 <b>Email:</b> " . ($email ?: 'N/A') . "\n";
             $msg .= "🆔 <b>Telegram ID:</b> <code>{$telegramUserId}</code>\n";
-            $msg .= "📋 <b>Status:</b> " . ucfirst($dbStatus) . "\n";
+            $msg .= "📋 <b>Status:</b> " . ucfirst($dbStatus) . " (StroWallet: {$kycStatus})\n";
             $msg .= "🕐 <b>Updated:</b> " . date('d/m/Y H:i:s');
             
             sendTelegramMessage(ADMIN_CHAT_ID, $msg);
         }
+        
+        logEvent('kyc_updated_success', [
+            'email' => $email, 
+            'customer_id' => $customerId, 
+            'status' => $dbStatus,
+            'strowallet_status' => $kycStatus
+        ]);
     } catch (Exception $e) {
         logEvent('kyc_update_error', ['error' => $e->getMessage(), 'data' => $data]);
     }
