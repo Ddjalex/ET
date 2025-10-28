@@ -7,10 +7,13 @@
 - Bot Name: ET_Card
 - Telegram Webhook: Connected and Active
 - StroWallet Integration: Working
-- Database: PostgreSQL (Replit/Neon) - Migrated and Ready
+- Database: PostgreSQL (Replit/Neon) - Migrated and Ready (13 tables)
 - Admin Panel: Available at `/admin/` (default: admin/admin123)
+- **Broadcaster Module:** ✅ Active (create and send broadcasts to Telegram channel and in-app feed)
 - **StroWallet User Sync:** ✅ Active (imports existing StroWallet customers)
-- **Recent Fix (Oct 28, 2025):** Fixed critical webhook parameter binding bug for KYC status updates
+- **Recent Updates (Oct 28, 2025):**
+  - ✅ Added full-featured Broadcaster module with giveaway support
+  - ✅ Fixed critical webhook parameter binding bug for KYC status updates
 
 ### ✅ Working Features:
 - Customer registration via Telegram (`/register` command)
@@ -69,9 +72,19 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
 ### Features Implemented
 - **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/invite`, `/support`.
 - **Reply Keyboard Buttons:** Create Card, My Cards, User Info, Wallet, Invite Friends, Support.
-- **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events.
+- **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events; Giveaway entry tracking via callback_query.
 - **Admin Panel KYC Management:** Real-time auto-refresh, manual sync, user filtering by KYC status.
-- **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, and network errors, with request ID display and user-friendly messages.
+- **Broadcaster Module:** Full-featured broadcast system for admin-to-user communication:
+  - **Content Types:** Text, Photo, Video, Poll (with quiz mode)
+  - **Delivery Channels:** Telegram channel and/or in-app feed
+  - **Scheduling:** Draft, schedule for later, or send immediately
+  - **Inline Buttons:** URL links and giveaway entry tracking
+  - **Giveaway System:** Track entries, end dates, random winner selection
+  - **Pin Messages:** Automatically pin important broadcasts to Telegram channel
+  - **Comprehensive Logging:** Track send status, Telegram message IDs, errors
+  - **Status Filtering:** View broadcasts by draft/scheduled/sent/failed status
+  - **Stats Dashboard:** Quick overview of broadcast counts by status
+- **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, and network errors, with request ID display and user-friendly messages; Telegram API error handling with ok field validation.
 
 ## 🔧 Required Environment Variables (Replit Secrets)
 
@@ -93,7 +106,7 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
 
 ### What's Stored Where:
 
-#### Local PostgreSQL Database (10 Tables):
+#### Local PostgreSQL Database (13 Tables):
 **Purpose:** Admin panel, tracking, and temporary registration staging
 
 1. **admin_users** - Admin panel login credentials
@@ -109,6 +122,9 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
     - Stores: telegram_user_id, registration_state, kyc_status
     - During registration: Temporarily holds all data (name, address, ID photos)
     - After completion: Only keeps reference data and KYC status sync
+11. **broadcasts** - Broadcast content, scheduling, and delivery settings
+12. **broadcast_logs** - Detailed send history, status tracking, and error logs
+13. **giveaway_entries** - Tracks giveaway participants and winners
 
 #### StroWallet API Database (Their System):
 **Purpose:** Primary customer data, KYC documents, cards, and wallets
