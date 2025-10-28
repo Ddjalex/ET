@@ -23,10 +23,10 @@ if (empty(STROWALLET_SECRET)) {
 // ==================== CONFIGURE YOUR EXISTING CUSTOMERS HERE ====================
 // Add the email addresses of customers already registered in StroWallet
 $existingCustomerEmails = [
-    'test1761389150@example.com',
-    'walmesaged@gmail.com',
-    'wondimualmasaged@gmail.com',
-    // Add more email addresses here as needed
+    'addisumelk04@gmail.com',
+    'almesagadw@gmail.com',
+    'amanuall071@gmail.com',
+    'ethiopian.customer@example.com',
 ];
 // ================================================================================
 
