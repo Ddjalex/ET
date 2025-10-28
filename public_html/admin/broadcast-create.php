@@ -1,8 +1,11 @@
 <?php
-$pageTitle = 'Create Broadcast';
-require_once __DIR__ . '/includes/header.php';
+// Load session and database BEFORE any HTML output
+require_once __DIR__ . '/config/session.php';
 require_once __DIR__ . '/config/database.php';
+requireAdminLogin();
+$currentAdmin = getCurrentAdmin();
 
+$pageTitle = 'Create Broadcast';
 $message = '';
 $messageType = '';
 $broadcast = null;
@@ -128,6 +131,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header("Location: /admin/broadcaster.php");
     exit;
 }
+
+// Now include header AFTER all POST processing and redirects
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-header">
