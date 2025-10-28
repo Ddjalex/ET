@@ -1,9 +1,12 @@
 <?php
-$pageTitle = 'User Management';
-require_once __DIR__ . '/includes/header.php';
+// Load session and database BEFORE any HTML output or AJAX endpoints
+require_once __DIR__ . '/config/session.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/../../secrets/load_env.php';
+requireAdminLogin();
+$currentAdmin = getCurrentAdmin();
 
+$pageTitle = 'User Management';
 $message = '';
 $messageType = '';
 
@@ -154,6 +157,9 @@ $statusCounts = dbFetchOne("
         COUNT(*) as total
     FROM users
 ");
+
+// Now include header AFTER all processing and AJAX endpoints
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-header">

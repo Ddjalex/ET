@@ -28,8 +28,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title'] ?? '');
     $contentType = $_POST['content_type'] ?? 'text';
     $contentText = trim($_POST['content_text'] ?? '');
-    $mediaUrl = trim($_POST['media_url'] ?? '');
     $mediaCaption = trim($_POST['media_caption'] ?? '');
+    
+    // Handle file upload for photo/video
+    $mediaUrl = trim($_POST['existing_media_url'] ?? '');
+    if (isset($_FILES['media_file']) && $_FILES['media_file']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = __DIR__ . '/../../uploads/broadcasts/';
+        $allowedImageTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        $allowedVideoTypes = ['video/mp4', 'video/quicktime', 'video/x-msvideo'];
+        
+        $fileType = $_FILES['media_file']['type'];
+        $fileSize = $_FILES['media_file']['size'];
+        $fileExt = strtolower(pathinfo($_FILES['media_file']['name'], PATHINFO_EXTENSION));
+        
+        // Validate file type
+        $isValidImage = in_array($fileType, $allowedImageTypes) && $fileSize <= 10 * 1024 * 1024; // 10MB
+        $isValidVideo = in_array($fileType, $allowedVideoTypes) && $fileSize <= 50 * 1024 * 1024; // 50MB
+        
+        if ($isValidImage || $isValidVideo) {
+            $fileName = uniqid('broadcast_' . time() . '_') . '.' . $fileExt;
+            $uploadPath = $uploadDir . $fileName;
+            
+            if (move_uploaded_file($_FILES['media_file']['tmp_name'], $uploadPath)) {
+                $mediaUrl = '/uploads/broadcasts/' . $fileName;
+            } else {
+                $message = "⚠️ Failed to upload file";
+                $messageType = 'alert-warning';
+            }
+        } else {
+            $message = "⚠️ Invalid file type or size. Images: max 10MB, Videos: max 50MB";
+            $messageType = 'alert-warning';
+        }
+    }
     
     $pollQuestion = trim($_POST['poll_question'] ?? '');
     $pollOptions = isset($_POST['poll_options']) ? json_encode(array_filter($_POST['poll_options'])) : null;
@@ -147,7 +177,7 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 <?php endif; ?>
 
-<form method="POST" id="broadcastForm">
+<form method="POST" id="broadcastForm" enctype="multipart/form-data">
     <div class="card">
         <h3 style="margin-bottom: 20px;">📝 Basic Information</h3>
         
@@ -189,14 +219,21 @@ require_once __DIR__ . '/includes/header.php';
             <small style="color: #94a3b8;">HTML tags supported: &lt;b&gt;, &lt;i&gt;, &lt;u&gt;, &lt;a&gt;, &lt;code&gt;</small>
         </div>
         
-        <div style="margin-bottom: 20px; display: none;" id="mediaUrlField">
+        <div style="margin-bottom: 20px; display: none;" id="mediaUploadField">
             <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #f8fafc;">
-                Media URL <span style="color: #ef4444;">*</span>
+                Upload Media File <span style="color: #ef4444;">*</span>
             </label>
-            <input type="url" name="media_url"
-                   value="<?php echo htmlspecialchars($broadcast['media_url'] ?? ''); ?>"
-                   placeholder="https://example.com/image.jpg or https://example.com/video.mp4"
+            <?php if (!empty($broadcast['media_url'])): ?>
+                <div style="margin-bottom: 10px; padding: 10px; background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 8px; color: #86efac;">
+                    ✓ Current file: <?php echo basename($broadcast['media_url']); ?>
+                </div>
+            <?php endif; ?>
+            <input type="file" name="media_file" id="mediaFileInput" accept="image/*,video/*"
                    style="width: 100%; padding: 12px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; color: #f8fafc;">
+            <small style="color: #94a3b8; display: block; margin-top: 5px;">
+                Supported: JPG, PNG, GIF (max 10MB) | MP4, MOV (max 50MB)
+            </small>
+            <input type="hidden" name="existing_media_url" value="<?php echo htmlspecialchars($broadcast['media_url'] ?? ''); ?>">
         </div>
         
         <div style="margin-bottom: 20px; display: none;" id="captionField">
@@ -400,17 +437,17 @@ require_once __DIR__ . '/includes/header.php';
 function toggleContentFields() {
     const type = document.getElementById('contentType').value;
     const textField = document.getElementById('textField');
-    const mediaUrlField = document.getElementById('mediaUrlField');
+    const mediaUploadField = document.getElementById('mediaUploadField');
     const captionField = document.getElementById('captionField');
     const pollFields = document.getElementById('pollFields');
     
     textField.style.display = 'block';
-    mediaUrlField.style.display = 'none';
+    mediaUploadField.style.display = 'none';
     captionField.style.display = 'none';
     pollFields.style.display = 'none';
     
     if (type === 'photo' || type === 'video') {
-        mediaUrlField.style.display = 'block';
+        mediaUploadField.style.display = 'block';
         captionField.style.display = 'block';
         textField.style.display = 'none';
     } else if (type === 'poll') {
