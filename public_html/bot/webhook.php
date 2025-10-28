@@ -221,6 +221,12 @@ function handleCallbackQuery($callbackQuery) {
     // Answer the callback to remove loading state
     answerCallbackQuery($callbackId);
     
+    // Handle giveaway entry tracking - no registration check needed
+    if (strpos($data, 'giveaway_') === 0) {
+        handleGiveawayEntry($chatId, $userId, $data);
+        return;
+    }
+    
     // Handle admin callbacks (payment method selection) - no registration check needed
     if (strpos($data, 'deposit_method_') === 0) {
         handleAdminDepositMethodSelection($chatId, $userId, $data);
@@ -249,6 +255,85 @@ function handleCallbackQuery($callbackQuery) {
             return;
         }
         requestAdminDeposit($chatId, $userId);
+    }
+}
+
+function handleGiveawayEntry($chatId, $userId, $callbackData) {
+    // Parse callback data: giveaway_{broadcast_id}_{encoded_data}
+    $parts = explode('_', $callbackData, 3);
+    if (count($parts) < 2) {
+        sendMessage($chatId, "❌ Invalid giveaway data.", false);
+        return;
+    }
+    
+    $broadcastId = (int)$parts[1];
+    $buttonData = isset($parts[2]) ? base64_decode($parts[2]) : '';
+    
+    // Get database connection
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Database connection failed. Please try again later.", false);
+        return;
+    }
+    
+    try {
+        // Check if broadcast exists and is a giveaway
+        $stmt = $db->prepare("SELECT id, title, is_giveaway, giveaway_ends_at FROM broadcasts WHERE id = ? AND is_giveaway = true");
+        $stmt->execute([$broadcastId]);
+        $broadcast = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$broadcast) {
+            sendMessage($chatId, "❌ This giveaway is no longer available.", false);
+            return;
+        }
+        
+        // Check if giveaway has ended
+        if ($broadcast['giveaway_ends_at'] && strtotime($broadcast['giveaway_ends_at']) < time()) {
+            sendMessage($chatId, "❌ This giveaway has ended. Thank you for your interest!", false);
+            return;
+        }
+        
+        // Get or create user in users table
+        $stmt = $db->prepare("SELECT id FROM users WHERE telegram_id = ?");
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $dbUserId = $user['id'] ?? null;
+        
+        // Check if user already entered
+        if ($dbUserId) {
+            $stmt = $db->prepare("SELECT id FROM giveaway_entries WHERE broadcast_id = ? AND telegram_user_id = ?");
+            $stmt->execute([$broadcastId, $userId]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existing) {
+                sendMessage($chatId, "✅ You're already entered in this giveaway! Good luck! 🍀", false);
+                return;
+            }
+        }
+        
+        // Insert giveaway entry
+        $stmt = $db->prepare("INSERT INTO giveaway_entries (broadcast_id, user_id, telegram_user_id, button_data) VALUES (?, ?, ?, ?)");
+        $stmt->execute([$broadcastId, $dbUserId, $userId, $buttonData]);
+        
+        // Get total entries
+        $stmt = $db->prepare("SELECT COUNT(*) as count FROM giveaway_entries WHERE broadcast_id = ?");
+        $stmt->execute([$broadcastId]);
+        $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Send confirmation message
+        $endDate = $broadcast['giveaway_ends_at'] ? date('F j, Y', strtotime($broadcast['giveaway_ends_at'])) : 'soon';
+        $message = "🎉 <b>You're in!</b>\n\n";
+        $message .= "✅ Successfully entered the <b>" . htmlspecialchars($broadcast['title']) . "</b> giveaway!\n\n";
+        $message .= "📊 Total entries: <b>{$count}</b>\n";
+        $message .= "📅 Winners announced: <b>{$endDate}</b>\n\n";
+        $message .= "🍀 Good luck!";
+        
+        sendMessage($chatId, $message, false);
+        
+    } catch (Exception $e) {
+        error_log("Giveaway entry error: " . $e->getMessage());
+        sendMessage($chatId, "❌ Failed to enter giveaway. Please try again later.", false);
     }
 }
 
