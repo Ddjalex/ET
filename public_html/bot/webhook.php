@@ -1613,6 +1613,52 @@ function handleRegistrationFlow($chatId, $userId, $text, $currentState, $fileId 
                 sendMessage($chatId, "❌ Invalid email address. Please enter a valid email.", false);
                 return;
             }
+            
+            // Check if this email exists in the users table (StroWallet sync)
+            $pdo = getDBConnection();
+            if ($pdo) {
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ? LIMIT 1");
+                    $stmt->execute([$text]);
+                    $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+                    
+                    if ($existingUser) {
+                        // User exists in StroWallet! Link telegram_id and complete registration
+                        $updateStmt = $pdo->prepare("UPDATE users SET telegram_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?");
+                        $updateStmt->execute([$userId, $existingUser['id']]);
+                        
+                        // Clear registration state
+                        updateUserRegistrationState($userId, 'completed');
+                        
+                        $kycStatus = $existingUser['kyc_status'] ?? 'pending';
+                        
+                        if ($kycStatus === 'approved') {
+                            $msg = "🎉 <b>Welcome Back!</b>\n\n";
+                            $msg .= "✅ We found your verified StroWallet account!\n\n";
+                            $msg .= "Your Telegram account has been linked successfully.\n\n";
+                            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+                            $msg .= "🚀 You're all set! Use the menu below to get started.";
+                            sendMessage($chatId, $msg, true);
+                        } elseif ($kycStatus === 'rejected') {
+                            $msg = "❌ <b>Account Found</b>\n\n";
+                            $msg .= "Your StroWallet account was found, but your KYC verification was rejected.\n\n";
+                            $msg .= "Please contact support for assistance.";
+                            sendMessage($chatId, $msg, false);
+                        } else {
+                            $msg = "✅ <b>Account Linked!</b>\n\n";
+                            $msg .= "We found your StroWallet account and linked it to Telegram.\n\n";
+                            $msg .= "⏳ Your KYC is currently under review.\n\n";
+                            $msg .= "🔔 You'll be notified once approved.";
+                            sendMessage($chatId, $msg, false);
+                        }
+                        return;
+                    }
+                } catch (PDOException $e) {
+                    error_log("Error checking existing user: " . $e->getMessage());
+                }
+            }
+            
+            // Email not found in users table - continue with normal registration
             updateUserField($userId, 'email', $text);
             updateUserRegistrationState($userId, 'awaiting_house_number');
             sendMessage($chatId, "✅ Excellent!\n\n🏠 <b>What's your house/apartment number?</b>\nExample: 12B", false);
@@ -1915,9 +1961,37 @@ function getUserRegistrationData($userId) {
     if (!$pdo) return null;
     
     try {
+        // First, check user_registrations table (for bot-registered users)
         $stmt = $pdo->prepare("SELECT * FROM user_registrations WHERE telegram_user_id = ?");
         $stmt->execute([$userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $regData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($regData) {
+            return $regData;
+        }
+        
+        // If not found, check users table (for StroWallet-synced users)
+        // Only match by telegram_id to ensure we get the right user
+        $stmt = $pdo->prepare("SELECT * FROM users WHERE telegram_id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($userData) {
+            // Return data in format compatible with user_registrations structure
+            return [
+                'id' => $userData['id'],
+                'telegram_user_id' => $userId,
+                'is_registered' => true,
+                'kyc_status' => $userData['kyc_status'] ?? 'pending',
+                'first_name' => $userData['first_name'],
+                'last_name' => $userData['last_name'],
+                'email' => $userData['email'],
+                'phone' => $userData['phone'],
+                'strow_customer_id' => $userData['strow_customer_id'] ?? null
+            ];
+        }
+        
+        return null;
     } catch (PDOException $e) {
         error_log("Error getting user data: " . $e->getMessage());
         return null;
