@@ -544,6 +544,41 @@ function checkKYCStatus($chatId, $userId) {
     }
     
     $kycStatus = $userData['kyc_status'] ?? 'pending';
+    $email = $userData['email'] ?? '';
+    
+    // Always fetch latest KYC status from StroWallet if user has email
+    if ($email) {
+        error_log("checkKYCStatus: Fetching latest status from StroWallet for user $userId");
+        
+        $customerCheck = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($email), 'GET', [], true);
+        
+        if (!isset($customerCheck['error']) && isset($customerCheck['data'])) {
+            $customerData = $customerCheck['data'];
+            $fetchedKycStatus = $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
+            
+            // Map StroWallet KYC status to our format
+            // StroWallet uses: Low, Medium, High for KYC levels
+            if (in_array(strtolower($fetchedKycStatus), ['high', 'verified', 'approved'])) {
+                $kycStatus = 'approved';
+            } elseif (in_array(strtolower($fetchedKycStatus), ['rejected', 'failed'])) {
+                $kycStatus = 'rejected';
+            } else {
+                $kycStatus = 'pending';
+            }
+            
+            // Update local database with latest status
+            $db = getDBConnection();
+            if ($db) {
+                try {
+                    $stmt = $db->prepare("UPDATE user_registrations SET kyc_status = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
+                    $stmt->execute([$kycStatus, $userId]);
+                    error_log("checkKYCStatus: Updated user $userId status to $kycStatus (from StroWallet: $fetchedKycStatus)");
+                } catch (Exception $e) {
+                    error_log("checkKYCStatus: Failed to update status: " . $e->getMessage());
+                }
+            }
+        }
+    }
     
     if ($kycStatus === 'rejected') {
         sendMessage($chatId, "❌ <b>KYC Verification Failed</b>\n\nYour KYC was rejected. Please contact support.", false);
@@ -975,9 +1010,9 @@ function handleCheckStatus($chatId, $userId) {
     $registrationState = $userData['registration_state'] ?? '';
     $strowalletCustomerId = $userData['strowallet_customer_id'] ?? '';
     
-    // If email exists but no StroWallet customer ID, try to fetch from StroWallet API
-    if ($email && !$strowalletCustomerId) {
-        error_log("Fetching customer status from StroWallet for user $userId (email: $email)");
+    // Always fetch latest status from StroWallet if user has email
+    if ($email) {
+        error_log("Fetching latest customer status from StroWallet for user $userId (email: $email)");
         
         $customerCheck = callStroWalletAPI('/bitvcard/getcardholder/?public_key=' . STROW_PUBLIC_KEY . '&customerEmail=' . urlencode($email), 'GET', [], true);
         
@@ -988,23 +1023,24 @@ function handleCheckStatus($chatId, $userId) {
             $fetchedKycStatus = $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
             
             // Map StroWallet KYC status to our format
-            if (in_array(strtolower($fetchedKycStatus), ['verified', 'approved'])) {
+            // StroWallet uses: Low, Medium, High for KYC levels
+            if (in_array(strtolower($fetchedKycStatus), ['high', 'verified', 'approved'])) {
                 $kycStatus = 'approved';
             } elseif (in_array(strtolower($fetchedKycStatus), ['rejected', 'failed'])) {
                 $kycStatus = 'rejected';
             } else {
-                // 'pending', 'under_review', 'unreview', 'processing', etc.
+                // 'pending', 'under_review', 'unreview', 'processing', 'Low', 'Medium', etc.
                 $kycStatus = 'pending';
             }
             
-            // Update local database with StroWallet data
+            // Update local database with latest StroWallet data
             if ($strowalletCustomerId) {
                 $db = getDBConnection();
                 if ($db) {
                     try {
                         $stmt = $db->prepare("UPDATE user_registrations SET strowallet_customer_id = ?, kyc_status = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
                         $stmt->execute([$strowalletCustomerId, $kycStatus, $userId]);
-                        error_log("Updated user $userId: strowallet_customer_id=$strowalletCustomerId, kyc_status=$kycStatus");
+                        error_log("Updated user $userId: strowallet_customer_id=$strowalletCustomerId, kyc_status=$kycStatus (from StroWallet: $fetchedKycStatus)");
                     } catch (Exception $e) {
                         error_log("Failed to update user registration: " . $e->getMessage());
                     }
@@ -1012,6 +1048,8 @@ function handleCheckStatus($chatId, $userId) {
             }
             
             error_log("Fetched KYC status from StroWallet: $fetchedKycStatus (mapped to: $kycStatus)");
+        } else {
+            error_log("Failed to fetch customer from StroWallet: " . json_encode($customerCheck));
         }
     }
     
