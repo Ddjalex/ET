@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                 
                 // Save to database
                 $value = json_encode($accounts);
-                $existing = dbFetchOne("SELECT id FROM settings WHERE key = 'deposit_accounts'");
+                $existing = dbFetchOne("SELECT key FROM settings WHERE key = 'deposit_accounts'");
                 if ($existing) {
                     dbQuery("UPDATE settings SET value = ?, updated_at = NOW(), updated_by = ? WHERE key = 'deposit_accounts'", [$value, $adminId]);
                 } else {
