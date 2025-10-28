@@ -124,14 +124,21 @@ echo "════════════════════════�
 echo "Enter customer email addresses (one per line, press Enter twice when done):\n";
 $customerEmails = [];
 
-// Customer emails from StroWallet (visible in your dashboard)
+// Customer emails from StroWallet (all 12 customers)
 $customerEmailsFromConfig = [
-    'addisumelk04@gmail.com',      // kalkidan adanu - High KYC
-    'almesagadw@gmail.com',         // Addisu melke - Low KYC
-    'amanuall071@gmail.com',        // Kalkidan Semeneh - Unreview KYC
-    'ethiopian.customer@example.com', // Ethiopian Customer - Low KYC
-    // Add the remaining 8 customer emails from your StroWallet dashboard below:
-    // (Go to StroWallet → Card Issuing → List Cardholders to see all emails)
+    // Real customers (rows 11-12 from StroWallet)
+    'walmesaged@gmail.com',          // Row 11: Eyerus Gadisa - Low KYC (REAL)
+    'Wondimualmasaged@gmail.com',    // Row 12: Eyerus Gadisa - High KYC (REAL)
+    
+    // Previously imported
+    'addisumelk04@gmail.com',        // Row 2: kalkidan adanu - High KYC
+    'almesagadw@gmail.com',          // Row 3: Addisu melke - Low KYC
+    'amanuall071@gmail.com',         // Row 4: Kalkidan Semeneh - Unreview KYC
+    'ethiopian.customer@example.com', // Row 5: Ethiopian Customer - Low KYC
+    
+    // Test/Mock data (rows 9-10 - optional)
+    'test.user999@example.com',      // Row 9: Test User - Low KYC
+    'test1761389150@example.com',    // Row 10: Test User - Low KYC
 ];
 
 $customerEmails = array_filter(array_map('trim', $customerEmailsFromConfig));

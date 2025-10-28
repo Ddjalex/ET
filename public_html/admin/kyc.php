@@ -12,15 +12,15 @@ define('STROW_BASE', 'https://strowallet.com/api');
 define('STROWALLET_API_KEY', getenv('STROWALLET_API_KEY') ?: '');
 define('STROWALLET_SECRET', getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
 
-// Function to call StroWallet API with Bearer token authentication (same as webhook.php)
+// Function to call StroWallet API with public_key parameter (as per StroWallet API docs)
 function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
-    $url = STROW_BASE . $endpoint;
+    // Add public_key to the URL
+    $separator = (strpos($endpoint, '?') !== false) ? '&' : '?';
+    $url = STROW_BASE . $endpoint . $separator . 'public_key=' . urlencode(STROWALLET_API_KEY);
     
-    // Prepare headers with Authorization Bearer token
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json',
-        'Authorization: Bearer ' . STROWALLET_SECRET
+        'Accept: application/json'
     ];
     
     $ch = curl_init();
@@ -55,6 +55,37 @@ function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
         'data' => json_decode($response, true),
         'raw' => $response
     ];
+}
+
+// AJAX endpoint to fetch customer details from StroWallet
+if (isset($_GET['get_customer_details']) && isset($_GET['user_id'])) {
+    header('Content-Type: application/json');
+    $userId = (int)$_GET['user_id'];
+    $user = dbFetchOne("SELECT * FROM users WHERE id = ?", [$userId]);
+    
+    if (!$user || empty($user['email'])) {
+        echo json_encode(['error' => 'User not found']);
+        exit;
+    }
+    
+    // Fetch full customer details from StroWallet
+    $result = callStroWalletAPI('/bitvcard/getcardholder/?customerEmail=' . urlencode($user['email']), 'GET');
+    
+    if ($result['http_code'] === 200 && isset($result['data'])) {
+        $customerData = isset($result['data']['data']) ? $result['data']['data'] : $result['data'];
+        echo json_encode([
+            'success' => true,
+            'data' => $customerData,
+            'local' => $user  // Include local database data as backup
+        ]);
+    } else {
+        echo json_encode([
+            'error' => 'Could not fetch customer from StroWallet',
+            'local' => $user,  // Fallback to local data
+            'http_code' => $result['http_code']
+        ]);
+    }
+    exit;
 }
 
 // Sync KYC status from StroWallet if requested
@@ -232,84 +263,159 @@ $statusCounts = dbFetchOne("
 
 <script>
 function showKYCDetails(userId) {
-    const users = <?php echo json_encode($users); ?>;
-    const user = users.find(u => u.id === userId);
-    
-    if (!user) return;
-    
-    const canApprove = user.kyc_status === 'pending';
-    
-    const content = `
-        <div style="margin-bottom: 20px;">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                <div>
-                    <h4 style="margin-bottom: 10px;">Personal Information</h4>
-                    <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
-                        <p><strong>Name:</strong> ${user.first_name} ${user.last_name}</p>
-                        <p><strong>Email:</strong> ${user.email}</p>
-                        <p><strong>Phone:</strong> ${user.phone}</p>
-                        <p><strong>DOB:</strong> ${user.date_of_birth || 'Not provided'}</p>
-                        <p><strong>Telegram ID:</strong> ${user.telegram_id}</p>
-                    </div>
-                </div>
-                <div>
-                    <h4 style="margin-bottom: 10px;">ID Information</h4>
-                    <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
-                        <p><strong>ID Type:</strong> ${user.id_type || 'Not provided'}</p>
-                        <p><strong>ID Number:</strong> ${user.id_number || 'Not provided'}</p>
-                    </div>
-                </div>
-            </div>
-            
-            ${user.address_line1 ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 10px;">Address</h4>
-                    <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
-                        <p>${user.address_line1}${user.house_number ? ', ' + user.house_number : ''}</p>
-                        <p>${user.address_city || ''}, ${user.address_state || ''} ${user.address_zip || ''}</p>
-                        <p>${user.address_country || ''}</p>
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${user.id_image_url || user.user_photo_url ? `
-                <div style="margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 10px;">Documents</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                        ${user.id_image_url ? `
-                            <div>
-                                <strong>ID Document:</strong><br>
-                                <a href="${user.id_image_url}" target="_blank" style="color: #667eea;">View ID Image</a>
-                            </div>
-                        ` : ''}
-                        ${user.user_photo_url ? `
-                            <div>
-                                <strong>User Photo:</strong><br>
-                                <a href="${user.user_photo_url}" target="_blank" style="color: #667eea;">View Photo</a>
-                            </div>
-                        ` : ''}
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${user.kyc_rejection_reason ? `
-                <div style="background: #fee2e2; padding: 15px; border-radius: 5px; margin-bottom: 15px;">
-                    <strong>Previous Rejection Reason:</strong><br>
-                    ${user.kyc_rejection_reason}
-                </div>
-            ` : ''}
-            
-            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-                <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-                    <strong>KYC Status:</strong> ${user.kyc_status === 'approved' ? '<span style="color: #10b981;">✓ Verified by StroWallet</span>' : user.kyc_status === 'rejected' ? '<span style="color: #ef4444;">✗ Rejected by StroWallet</span>' : '<span style="color: #f59e0b;">⏳ Pending verification</span>'}
-                </p>
-                <button onclick="closeKYCModal()" class="btn btn-primary">Close</button>
-            </div>
+    // Show modal with loading state
+    document.getElementById('kycDetailsContent').innerHTML = `
+        <div style="text-align: center; padding: 40px;">
+            <div style="font-size: 24px; margin-bottom: 10px;">⏳</div>
+            <p>Fetching customer details from StroWallet...</p>
         </div>
     `;
-    
-    document.getElementById('kycDetailsContent').innerHTML = content;
     document.getElementById('kycModal').style.display = 'flex';
+    
+    // Fetch customer details from StroWallet in real-time
+    fetch(`?get_customer_details=1&user_id=${userId}`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.error) {
+                showErrorInModal(result.error, result.local);
+                return;
+            }
+            
+            const customer = result.data;
+            const local = result.local;
+            
+            // Map StroWallet field names (flexible to handle variations)
+            const firstName = customer.firstName || customer.first_name || local.first_name || '';
+            const lastName = customer.lastName || customer.last_name || local.last_name || '';
+            const email = customer.customerEmail || customer.email || local.email || '';
+            const phone = customer.phone || customer.phoneNumber || local.phone || 'Not provided';
+            const dob = customer.dateOfBirth || customer.date_of_birth || local.date_of_birth || 'Not provided';
+            const telegramId = local.telegram_id || 'Not linked';
+            
+            const idType = customer.idType || customer.id_type || local.id_type || 'Not provided';
+            const idNumber = customer.idNumber || customer.id_number || local.id_number || 'Not provided';
+            
+            const houseNumber = customer.houseNumber || customer.house_number || local.house_number || '';
+            const line1 = customer.line1 || customer.address_line1 || local.address_line1 || '';
+            const city = customer.city || customer.address_city || local.address_city || '';
+            const state = customer.state || customer.address_state || local.address_state || '';
+            const zipCode = customer.zipCode || customer.address_zip || local.address_zip || '';
+            const country = customer.country || customer.address_country || local.address_country || '';
+            
+            const idImage = customer.idImage || customer.id_image_url || local.id_image_url || '';
+            const userPhoto = customer.userPhoto || customer.user_photo_url || local.user_photo_url || '';
+            
+            const kycStatus = customer.status || customer.kycStatus || customer.kyc_status || local.kyc_status || 'pending';
+            const customerId = customer.customerId || customer.customer_id || local.strow_customer_id || '';
+            
+            const content = `
+                <div style="margin-bottom: 20px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <h4 style="margin-bottom: 10px;">Personal Information</h4>
+                            <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
+                                <p><strong>Name:</strong> ${firstName} ${lastName}</p>
+                                <p><strong>Email:</strong> ${email}</p>
+                                <p><strong>Phone:</strong> ${phone}</p>
+                                <p><strong>DOB:</strong> ${dob}</p>
+                                <p><strong>Telegram ID:</strong> ${telegramId}</p>
+                            </div>
+                        </div>
+                        <div>
+                            <h4 style="margin-bottom: 10px;">ID Information</h4>
+                            <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
+                                <p><strong>ID Type:</strong> ${idType}</p>
+                                <p><strong>ID Number:</strong> ${idNumber}</p>
+                                <p><strong>Customer ID:</strong> <small>${customerId}</small></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${line1 || city || state ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">Address</h4>
+                            <div style="background: #f5f7fa; padding: 15px; border-radius: 5px;">
+                                <p>${houseNumber ? houseNumber + ', ' : ''}${line1}</p>
+                                <p>${city}${state ? ', ' + state : ''} ${zipCode}</p>
+                                <p>${country}</p>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${idImage || userPhoto ? `
+                        <div style="margin-bottom: 20px;">
+                            <h4 style="margin-bottom: 10px;">Documents</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                ${idImage ? `
+                                    <div>
+                                        <strong>ID Document:</strong><br>
+                                        <a href="${idImage}" target="_blank" style="color: #667eea;">View ID Image</a>
+                                    </div>
+                                ` : ''}
+                                ${userPhoto ? `
+                                    <div>
+                                        <strong>User Photo:</strong><br>
+                                        <a href="${userPhoto}" target="_blank" style="color: #667eea;">View Photo</a>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
+                        <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+                            <strong>KYC Status:</strong> ${getKYCStatusBadge(kycStatus)}
+                        </p>
+                        <p style="color: #999; font-size: 12px; margin-bottom: 15px;">
+                            ℹ️ Data fetched from StroWallet API (Read-only)
+                        </p>
+                        <button onclick="closeKYCModal()" class="btn btn-primary">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('kycDetailsContent').innerHTML = content;
+        })
+        .catch(error => {
+            document.getElementById('kycDetailsContent').innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #ef4444;">
+                    <div style="font-size: 24px; margin-bottom: 10px;">⚠️</div>
+                    <p>Failed to fetch customer details</p>
+                    <p style="font-size: 12px; margin-top: 10px;">${error.message}</p>
+                    <button onclick="closeKYCModal()" class="btn btn-primary" style="margin-top: 20px;">Close</button>
+                </div>
+            `;
+        });
+}
+
+function getKYCStatusBadge(status) {
+    const statusLower = (status || '').toLowerCase();
+    if (statusLower.includes('high kyc') || statusLower.includes('low kyc') || statusLower.includes('verified') || statusLower.includes('approved')) {
+        return '<span style="color: #10b981;">✓ Verified by StroWallet (' + status + ')</span>';
+    } else if (statusLower.includes('reject') || statusLower.includes('decline') || statusLower.includes('failed')) {
+        return '<span style="color: #ef4444;">✗ Rejected by StroWallet</span>';
+    } else {
+        return '<span style="color: #f59e0b;">⏳ Pending verification</span>';
+    }
+}
+
+function showErrorInModal(errorMsg, localData) {
+    const content = `
+        <div style="padding: 20px;">
+            <div style="background: #fee2e2; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <strong>⚠️ Could not fetch from StroWallet:</strong><br>
+                ${errorMsg}
+            </div>
+            <p style="color: #666;">Showing local database data instead:</p>
+            <div style="background: #f5f7fa; padding: 15px; border-radius: 5px; margin-top: 10px;">
+                <p><strong>Name:</strong> ${localData.first_name} ${localData.last_name}</p>
+                <p><strong>Email:</strong> ${localData.email}</p>
+                <p><strong>Status:</strong> ${localData.kyc_status}</p>
+            </div>
+            <button onclick="closeKYCModal()" class="btn btn-primary" style="margin-top: 20px;">Close</button>
+        </div>
+    `;
+    document.getElementById('kycDetailsContent').innerHTML = content;
 }
 
 function closeKYCModal() {
