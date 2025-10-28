@@ -105,12 +105,13 @@ if (isset($_GET['sync_user'])) {
             $messageType = 'alert-warning';
         } elseif ($result['http_code'] === 200 && isset($result['data']['data'])) {
             $strowData = $result['data']['data'];
-            $kycStatus = strtolower($strowData['kycStatus'] ?? 'pending');
+            // FIXED: Read the correct 'status' field from StroWallet (not 'kycStatus')
+            $kycStatus = strtolower($strowData['status'] ?? $strowData['kycStatus'] ?? 'pending');
             
             // Map StroWallet status to our database
             $dbStatus = match($kycStatus) {
-                'verified', 'approved' => 'approved',
-                'rejected', 'failed' => 'rejected',
+                'verified', 'approved', 'high kyc', 'low kyc' => 'approved',
+                'rejected', 'failed', 'decline', 'declined' => 'rejected',
                 default => 'pending'
             };
             

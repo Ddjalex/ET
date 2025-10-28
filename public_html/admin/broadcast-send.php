@@ -1,6 +1,9 @@
 <?php
-$pageTitle = 'Send Broadcast';
-require_once __DIR__ . '/includes/header.php';
+// SECURITY FIX: Require authentication FIRST before any logic
+require_once __DIR__ . '/config/session.php';
+requireAdminLogin();
+
+// Then load database and config (before header.php to allow redirects)
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/../../secrets/load_env.php';
 
@@ -220,6 +223,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_send'])) {
         $messageType = 'alert-danger';
     }
 }
+
+// Include header AFTER all redirect logic is complete
+$pageTitle = 'Send Broadcast';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-header">
