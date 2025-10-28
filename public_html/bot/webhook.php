@@ -554,13 +554,14 @@ function checkKYCStatus($chatId, $userId) {
         
         if (!isset($customerCheck['error']) && isset($customerCheck['data'])) {
             $customerData = $customerCheck['data'];
-            $fetchedKycStatus = $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
+            $fetchedKycStatus = $customerData['status'] ?? $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
             
             // Map StroWallet KYC status to our format
-            // StroWallet uses: Low, Medium, High for KYC levels
-            if (in_array(strtolower($fetchedKycStatus), ['high', 'verified', 'approved'])) {
+            // StroWallet uses: "high kyc", "low kyc", "medium kyc" as status values
+            $statusLower = strtolower(trim($fetchedKycStatus));
+            if (strpos($statusLower, 'high') !== false || strpos($statusLower, 'verified') !== false || strpos($statusLower, 'approved') !== false) {
                 $kycStatus = 'approved';
-            } elseif (in_array(strtolower($fetchedKycStatus), ['rejected', 'failed'])) {
+            } elseif (strpos($statusLower, 'rejected') !== false || strpos($statusLower, 'failed') !== false || strpos($statusLower, 'decline') !== false) {
                 $kycStatus = 'rejected';
             } else {
                 $kycStatus = 'pending';
@@ -1019,17 +1020,18 @@ function handleCheckStatus($chatId, $userId) {
         if (!isset($customerCheck['error']) && isset($customerCheck['data'])) {
             // Extract customer data from response
             $customerData = $customerCheck['data'];
-            $strowalletCustomerId = $customerData['customer_id'] ?? $customerData['id'] ?? '';
-            $fetchedKycStatus = $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
+            $strowalletCustomerId = $customerData['customerId'] ?? $customerData['customer_id'] ?? $customerData['id'] ?? '';
+            $fetchedKycStatus = $customerData['status'] ?? $customerData['kyc_status'] ?? $customerData['kycStatus'] ?? 'pending';
             
             // Map StroWallet KYC status to our format
-            // StroWallet uses: Low, Medium, High for KYC levels
-            if (in_array(strtolower($fetchedKycStatus), ['high', 'verified', 'approved'])) {
+            // StroWallet uses: "high kyc", "low kyc", "medium kyc" as status values
+            $statusLower = strtolower(trim($fetchedKycStatus));
+            if (strpos($statusLower, 'high') !== false || strpos($statusLower, 'verified') !== false || strpos($statusLower, 'approved') !== false) {
                 $kycStatus = 'approved';
-            } elseif (in_array(strtolower($fetchedKycStatus), ['rejected', 'failed'])) {
+            } elseif (strpos($statusLower, 'rejected') !== false || strpos($statusLower, 'failed') !== false || strpos($statusLower, 'decline') !== false) {
                 $kycStatus = 'rejected';
             } else {
-                // 'pending', 'under_review', 'unreview', 'processing', 'Low', 'Medium', etc.
+                // 'pending', 'under_review', 'unreview', 'low kyc', 'medium kyc', etc.
                 $kycStatus = 'pending';
             }
             
