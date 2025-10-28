@@ -2423,6 +2423,10 @@ function setUserDepositState($userId, $state) {
             // Update existing record
             $stmt = $db->prepare("UPDATE user_registrations SET registration_state = ?, updated_at = CURRENT_TIMESTAMP WHERE telegram_user_id = ?");
             $stmt->execute([$state, $userId]);
+        } else {
+            // Insert new record for users who were imported directly
+            $stmt = $db->prepare("INSERT INTO user_registrations (telegram_user_id, registration_state, created_at, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
+            $stmt->execute([$userId, $state]);
         }
         
         return true;
