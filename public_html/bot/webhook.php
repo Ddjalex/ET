@@ -196,6 +196,8 @@ if ($text === '/quickregister') {
     handleWallet($chatId, $userId);
 } elseif ($text === '/deposit_trc20') {
     handleDepositTRC20($chatId, $userId);
+} elseif ($text === '/deposit_etb' || $text === '💵 Deposit ETB') {
+    handleDepositETB($chatId, $userId);
 } elseif ($text === '/invite' || $text === '💸 Invite Friends') {
     handleInvite($chatId, $userId);
 } elseif ($text === '/support' || $text === '🧑‍💻 Support') {
@@ -230,6 +232,12 @@ function handleCallbackQuery($callbackQuery) {
     // Handle admin callbacks (payment method selection) - no registration check needed
     if (strpos($data, 'deposit_method_') === 0) {
         handleAdminDepositMethodSelection($chatId, $userId, $data);
+        return;
+    }
+    
+    // Handle ETB payment method selection - no registration check needed
+    if (strpos($data, 'etb_payment_') === 0) {
+        handleETBPaymentMethodSelection($chatId, $userId, $data);
         return;
     }
     
@@ -978,6 +986,153 @@ function handleSupport($chatId, $userId = null) {
     sendMessage($chatId, $msg, true, $userId);
 }
 
+function handleDepositETB($chatId, $userId = null) {
+    sendTypingAction($chatId);
+    
+    // Get deposit accounts from database
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Service temporarily unavailable. Please try again later.", true, $userId);
+        return;
+    }
+    
+    try {
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_accounts'");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result || empty($result['value'])) {
+            $msg = "⚠️ <b>Deposit Methods Not Available</b>\n\n";
+            $msg .= "No deposit methods are currently configured.\n\n";
+            $msg .= "Please contact support for assistance.";
+            sendMessage($chatId, $msg, true, $userId);
+            return;
+        }
+        
+        $accounts = json_decode($result['value'], true);
+        
+        if (empty($accounts)) {
+            $msg = "⚠️ <b>Deposit Methods Not Available</b>\n\n";
+            $msg .= "No deposit methods are currently configured.\n\n";
+            $msg .= "Please contact support for assistance.";
+            sendMessage($chatId, $msg, true, $userId);
+            return;
+        }
+        
+        // Build inline keyboard with payment methods
+        $keyboard = [];
+        foreach ($accounts as $account) {
+            $method = $account['method'] ?? 'Unknown';
+            $accountId = $account['id'] ?? '';
+            
+            if (!empty($accountId)) {
+                $keyboard[] = [
+                    ['text' => $method, 'callback_data' => 'etb_payment_' . $accountId]
+                ];
+            }
+        }
+        
+        // Send message with payment method options
+        $msg = "💵 <b>Deposit ETB</b>\n\n";
+        $msg .= "Please select your preferred payment method:\n\n";
+        $msg .= "👇 Click on a payment method below to see the account details.";
+        
+        $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+        $payload = [
+            'chat_id' => $chatId,
+            'text' => $msg,
+            'parse_mode' => 'HTML',
+            'reply_markup' => [
+                'inline_keyboard' => $keyboard
+            ]
+        ];
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_exec($ch);
+        curl_close($ch);
+        
+    } catch (Exception $e) {
+        error_log("Error fetching deposit accounts: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error loading payment methods. Please try again later.", true, $userId);
+    }
+}
+
+function handleETBPaymentMethodSelection($chatId, $userId, $callbackData) {
+    sendTypingAction($chatId);
+    
+    // Extract account ID from callback data
+    $accountId = str_replace('etb_payment_', '', $callbackData);
+    
+    // Get deposit accounts from database
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Service temporarily unavailable. Please try again later.", false);
+        return;
+    }
+    
+    try {
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_accounts'");
+        $stmt->execute();
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result || empty($result['value'])) {
+            sendMessage($chatId, "❌ Payment method not found.", false);
+            return;
+        }
+        
+        $accounts = json_decode($result['value'], true);
+        
+        // Find the selected account
+        $selectedAccount = null;
+        foreach ($accounts as $account) {
+            if (($account['id'] ?? '') === $accountId) {
+                $selectedAccount = $account;
+                break;
+            }
+        }
+        
+        if (!$selectedAccount) {
+            sendMessage($chatId, "❌ Payment method not found.", false);
+            return;
+        }
+        
+        // Display payment method details
+        $method = $selectedAccount['method'] ?? 'Unknown';
+        $accountName = $selectedAccount['account_name'] ?? 'N/A';
+        $accountNumber = $selectedAccount['account_number'] ?? 'N/A';
+        $instructions = $selectedAccount['instructions'] ?? '';
+        
+        $msg = "💳 <b>{$method}</b>\n\n";
+        $msg .= "📋 <b>Payment Details:</b>\n\n";
+        $msg .= "👤 <b>Account Name:</b>\n";
+        $msg .= "<code>{$accountName}</code>\n\n";
+        $msg .= "📞 <b>Account/Phone Number:</b>\n";
+        $msg .= "<code>{$accountNumber}</code>\n\n";
+        
+        if (!empty($instructions)) {
+            $msg .= "📝 <b>Instructions:</b>\n";
+            $msg .= "{$instructions}\n\n";
+        }
+        
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "💡 <b>How to Deposit:</b>\n";
+        $msg .= "1. Send money to the above account\n";
+        $msg .= "2. Keep your transaction receipt\n";
+        $msg .= "3. Contact support with your receipt\n\n";
+        $msg .= "⏱️ <i>Deposits are usually processed within 1-2 hours</i>";
+        
+        sendMessage($chatId, $msg, false);
+        
+    } catch (Exception $e) {
+        error_log("Error showing payment method details: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error loading payment details. Please try again later.", false);
+    }
+}
+
 function handleCheckStatus($chatId, $userId) {
     // Get user registration data
     $userData = getUserRegistrationData($userId);
@@ -1235,7 +1390,10 @@ function sendMessage($chatId, $text, $showKeyboard = false, $userId = null) {
                     ['text' => '💰 Wallet']
                 ],
                 [
-                    ['text' => '💸 Invite Friends'],
+                    ['text' => '💵 Deposit ETB'],
+                    ['text' => '💸 Invite Friends']
+                ],
+                [
                     ['text' => '🧑‍💻 Support']
                 ]
             ],
