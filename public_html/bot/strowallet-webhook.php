@@ -122,7 +122,7 @@ function handleKYCUpdated($data) {
     };
     
     // Connect to database
-    $pdo = getDBConnection();
+    $pdo = getWebhookDBConnection();
     if (!$pdo) return;
     
     // Update user KYC status in database
@@ -244,7 +244,7 @@ function notifyUserKYCRejected($telegramUserId, $reason) {
     sendTelegramMessage($telegramUserId, $msg);
 }
 
-function getDBConnection() {
+function getWebhookDBConnection() {
     $dbUrl = getenv('DATABASE_URL');
     if (empty($dbUrl)) {
         return null;
