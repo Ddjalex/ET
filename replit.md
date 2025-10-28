@@ -1,6 +1,6 @@
 # Telegram Crypto Card Bot - Project Documentation
 
-## 🎯 Current Status (Last Updated: October 25, 2025)
+## 🎯 Current Status (Last Updated: October 28, 2025)
 
 **System Status:** ✅ Fully Operational
 - Bot Username: **@ETH_Card_BOT**
@@ -9,12 +9,14 @@
 - StroWallet Integration: Working
 - Database: PostgreSQL (Replit/Neon) - Migrated and Ready
 - Admin Panel: Available at `/admin/` (default: admin/admin123)
+- **StroWallet User Sync:** ✅ Active (imports existing StroWallet customers)
 
 ### ✅ Working Features:
 - Customer registration via Telegram (`/register` command)
 - Full KYC data submission to StroWallet (ID images, selfie, personal info)
 - Customer data stored and verified in StroWallet dashboard
 - Webhook endpoints configured and active
+- **NEW:** Sync existing StroWallet customers to admin panel (`scripts/sync_strowallet_users.php`)
 
 ## Overview
 This project is a production-ready Telegram bot designed to manage virtual crypto cards through integration with the StroWallet API. Built with native PHP 8+ for cPanel deployment, it offers functionalities such as virtual card creation, card listing, user information display, wallet management, and deposit handling via Telegram. A comprehensive admin panel supports deposit management, KYC verification, and system settings, ensuring secure and efficient operations. The project aims to provide a robust solution for crypto card management.
@@ -70,9 +72,9 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
 ## 🔧 Required Environment Variables (Replit Secrets)
 
 **Critical Secrets - Must Be Set:**
-- `TELEGRAM_BOT_TOKEN` - Your bot token from @BotFather
-- `STROWALLET_API_KEY` - Your StroWallet Public Key (used as `public_key` in API calls)
-- `STROWALLET_WEBHOOK_SECRET` - Your StroWallet Secret Key (used for authentication)
+- `TELEGRAM_BOT_TOKEN` - Your bot token from @BotFather (optional, for bot functionality)
+- `STROWALLET_API_KEY` - Your StroWallet Public Key (used as `public_key` in API calls) ✅ Configured
+- `STROWALLET_WEBHOOK_SECRET` - Your StroWallet Secret Key (used for webhook authentication) ✅ Configured
 - `DATABASE_URL` - Auto-configured by Replit PostgreSQL
 
 **Optional Secrets:**

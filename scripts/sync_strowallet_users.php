@@ -55,16 +55,16 @@ try {
 }
 
 /**
- * Call StroWallet API with Bearer token authentication
+ * Call StroWallet API with public_key parameter
  */
 function callStroWalletAPI($endpoint, $method = 'GET', $data = []) {
-    $url = STROW_BASE . $endpoint;
+    // Add public_key to the URL
+    $separator = (strpos($endpoint, '?') !== false) ? '&' : '?';
+    $url = STROW_BASE . $endpoint . $separator . 'public_key=' . urlencode(STROWALLET_API_KEY);
     
-    // Prepare headers with Authorization Bearer token (same as webhook.php)
     $headers = [
         'Content-Type: application/json',
-        'Accept: application/json',
-        'Authorization: Bearer ' . STROWALLET_SECRET
+        'Accept: application/json'
     ];
     
     $ch = curl_init();
@@ -120,19 +120,20 @@ $customers = [];
 foreach ($existingCustomerEmails as $email) {
     echo "  → Fetching: {$email}...";
     
-    // Use Bearer token authentication (no public_key in URL)
+    // Use public_key parameter authentication
     $result = callStroWalletAPI('/bitvcard/getcardholder/?customerEmail=' . urlencode($email), 'GET');
     
     if (isset($result['error'])) {
         echo " ⚠️  Network error: {$result['error']}\n";
-    } elseif ($result['http_code'] === 200 && isset($result['data']['data'])) {
-        $customerData = $result['data']['data'];
+    } elseif ($result['http_code'] === 200 && isset($result['data'])) {
+        // Check if data is nested under 'data' key or directly in response
+        $customerData = isset($result['data']['data']) ? $result['data']['data'] : $result['data'];
         $customers[] = $customerData;
         echo " ✓\n";
     } else {
         echo " ⚠️  Not found (HTTP {$result['http_code']})\n";
         if ($result['http_code'] === 401 || $result['http_code'] === 403) {
-            echo "     Auth error - check STROWALLET_WEBHOOK_SECRET\n";
+            echo "     Auth error - check STROWALLET_API_KEY\n";
         }
     }
     
@@ -152,7 +153,7 @@ $updated = 0;
 $skipped = 0;
 
 foreach ($customers as $customer) {
-    $email = $customer['email'] ?? null;
+    $email = $customer['customerEmail'] ?? $customer['email'] ?? null;
     $customerId = $customer['customerId'] ?? $customer['customer_id'] ?? $customer['id'] ?? null;
     
     if (!$email || !$customerId) {
@@ -210,8 +211,8 @@ foreach ($customers as $customer) {
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ");
             
-            // Use a placeholder telegram_id (0) for users not yet linked to Telegram
-            $telegramId = 0;
+            // Use NULL for telegram_id for users not yet linked to Telegram
+            $telegramId = null;
             
             $insertStmt->execute([
                 $telegramId,
