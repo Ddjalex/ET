@@ -25,6 +25,39 @@ function getAutoDepositProcessor() {
 }
 
 /**
+ * Send message with return/cancel inline button
+ */
+function sendMessageWithReturn($chatId, $text, $buttonText = '🔙 Return to Menu', $callbackData = 'return_to_menu') {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    ['text' => $buttonText, 'callback_data' => $callbackData]
+                ]
+            ]
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200) {
+        error_log("Telegram API Error: HTTP $httpCode - Response: $response");
+    }
+}
+
+/**
  * Handle deposit transaction submission (can be ID or URL)
  */
 function handleDepositTransactionSubmission($chatId, $userId, $transactionInput) {
@@ -238,7 +271,7 @@ function handleDepositScreenshot_auto($chatId, $userId, $fileId) {
         $msg .= "• Example: TXN123456789\n\n";
         $msg .= "<i>Note: Transaction IDs require manual admin review</i>";
         
-        sendMessage($chatId, $msg, false);
+        sendMessageWithReturn($chatId, $msg, '❌ Cancel Deposit', 'cancel');
         
     } catch (Exception $e) {
         error_log("Error in handleDepositScreenshot_auto: " . $e->getMessage());

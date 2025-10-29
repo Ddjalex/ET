@@ -22,6 +22,39 @@ function getPaymentService() {
 }
 
 /**
+ * Send message with return/cancel inline button
+ */
+function sendMessageWithReturn($chatId, $text, $buttonText = '🔙 Return to Menu', $callbackData = 'return_to_menu') {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    ['text' => $buttonText, 'callback_data' => $callbackData]
+                ]
+            ]
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    if ($httpCode !== 200) {
+        error_log("Telegram API Error: HTTP $httpCode - Response: $response");
+    }
+}
+
+/**
  * Updated processDepositAmount - Hide deposit fee calculation
  */
 function processDepositAmount_v2($chatId, $userId, $amount) {
@@ -265,7 +298,7 @@ function handleUserDepositPaymentSelection_v2($chatId, $userId, $callbackData) {
     $userMsg .= "2️⃣ Transaction ID/Reference number\n\n";
     $userMsg .= "📝 Send screenshot now, then enter transaction ID.";
     
-    sendMessage($chatId, $userMsg, false);
+    sendMessageWithReturn($chatId, $userMsg, '❌ Cancel Deposit', 'cancel');
     
     // Set user state to wait for screenshot
     setUserDepositState($userId, 'awaiting_screenshot');

@@ -183,7 +183,7 @@ if ($userState === 'awaiting_screenshot') {
     if ($photo && is_array($photo) && count($photo) > 0) {
         handleDepositScreenshot_auto($chatId, $userId, $fileId);
     } else {
-        sendMessage($chatId, "📸 Please send a screenshot of your payment confirmation.", false);
+        sendMessageWithReturn($chatId, "📸 Please send a screenshot of your payment confirmation.", '❌ Cancel Deposit', 'cancel');
     }
     http_response_code(200);
     echo 'OK';
@@ -250,6 +250,13 @@ function handleCallbackQuery($callbackQuery) {
     
     // Answer the callback to remove loading state
     answerCallbackQuery($callbackId);
+    
+    // Handle "Return to Menu" button - reset state and show menu
+    if ($data === 'return_to_menu' || $data === 'cancel') {
+        setUserDepositState($userId, null);
+        sendMessage($chatId, "✅ Returned to main menu. How can I help you?", true, $userId);
+        return;
+    }
     
     // Handle giveaway entry tracking - no registration check needed
     if (strpos($data, 'giveaway_') === 0) {
@@ -1689,6 +1696,38 @@ function sendMessage($chatId, $text, $showKeyboard = false, $userId = null) {
         error_log("Telegram API Error: HTTP $httpCode - Response: $response");
     } else {
         error_log("Message sent successfully: " . substr($text, 0, 50));
+    }
+}
+
+function sendMessageWithReturn($chatId, $text, $buttonText = '🔙 Return to Menu', $callbackData = 'return_to_menu') {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    ['text' => $buttonText, 'callback_data' => $callbackData]
+                ]
+            ]
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    error_log("Sending message with return button to chat $chatId - HTTP $httpCode");
+    
+    if ($httpCode !== 200) {
+        error_log("Telegram API Error: HTTP $httpCode - Response: $response");
     }
 }
 
