@@ -67,17 +67,36 @@ function processDepositAmount_v2($chatId, $userId, $amount) {
         return;
     }
     
-    // Calculate Ethiopian Birr amount (WITHOUT showing fee)
+    // Calculate Ethiopian Birr amount
     $etbAmount = $usdAmount * $exchangeRate;
+    
+    // Get deposit fee from settings
+    $depositFee = 500; // Default 500 ETB
+    $db = getDBConnection();
+    if ($db) {
+        try {
+            $stmt = $db->query("SELECT value FROM settings WHERE key = 'deposit_fee'");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $feeData = json_decode($row['value'], true);
+                $depositFee = $feeData['flat'] ?? 500;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching deposit fee: " . $e->getMessage());
+        }
+    }
+    
+    // Calculate total amount including fee
+    $totalEtbAmount = $etbAmount + $depositFee;
     
     // Clear deposit state
     setUserDepositState($userId, null);
     
-    // Show deposit summary WITHOUT deposit fee
+    // Show deposit summary WITH total including fee
     $userMsg = "💰 <b>Deposit Summary</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n\n";
+    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($totalEtbAmount, 2) . " ETB\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "👇 <b>Select your payment method:</b>";
     

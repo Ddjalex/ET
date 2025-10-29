@@ -550,11 +550,10 @@ function handleUserDepositPaymentSelection($chatId, $userId, $callbackData) {
     $accountName = $account['account_name'];
     $accountNumber = $account['account_number'];
     
-    // Send payment instructions to user
+    // Send payment instructions to user (fee already included in total)
     $userMsg = "💰 <b>Payment Instructions</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n";
     $userMsg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n";
     $userMsg .= "{$icon} <b>Payment Method:</b> {$methodName}\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
@@ -586,7 +585,6 @@ function handleUserDepositPaymentSelection($chatId, $userId, $callbackData) {
         $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
         $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
-        $adminMsg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n";
         $adminMsg .= "💰 <b>Total (ETB):</b> " . number_format($totalEtbAmount, 2) . " ETB\n";
         $adminMsg .= "{$icon} <b>Payment Method:</b> {$methodName}\n";
         $adminMsg .= "📞 <b>Account:</b> {$accountNumber}\n\n";
@@ -718,17 +716,36 @@ function processDepositAmount($chatId, $userId, $amount) {
     // Calculate Ethiopian Birr amount
     $etbAmount = $usdAmount * $exchangeRate;
     
+    // Get deposit fee from settings
+    $depositFee = 500; // Default 500 ETB
+    $db = getDBConnection();
+    if ($db) {
+        try {
+            $stmt = $db->query("SELECT value FROM settings WHERE key = 'deposit_fee'");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $feeData = json_decode($row['value'], true);
+                $depositFee = $feeData['flat'] ?? 500;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching deposit fee: " . $e->getMessage());
+        }
+    }
+    
+    // Calculate total amount including fee
+    $totalEtbAmount = $etbAmount + $depositFee;
+    
     // Store deposit info temporarily
     storeDepositInfo($userId, $usdAmount, $exchangeRate, $etbAmount);
     
     // Clear deposit state
     setUserDepositState($userId, null);
     
-    // Show deposit summary to user with payment method options
+    // Show deposit summary to user with payment method options (WITH total including fee)
     $userMsg = "💰 <b>Deposit Summary</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n\n";
+    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($totalEtbAmount, 2) . " ETB\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "👇 <b>Select your payment method:</b>";
     
