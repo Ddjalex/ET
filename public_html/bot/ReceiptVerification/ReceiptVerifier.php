@@ -3,10 +3,12 @@
 require_once __DIR__ . '/Parsers/TelebirrParser.php';
 require_once __DIR__ . '/Parsers/CbeParser.php';
 require_once __DIR__ . '/Parsers/MpesaParser.php';
+require_once __DIR__ . '/../ProxyService.php';
 
 class ReceiptVerifier {
     private array $parsers;
     private array $allowed;
+    private ?ProxyService $proxyService;
 
     public function __construct() {
         $this->parsers = [
@@ -16,6 +18,7 @@ class ReceiptVerifier {
         ];
         $envAllowed = getenv('ALLOWED_DOMAINS') ?: 'transactioninfo.ethiotelecom.et,apps.cbe.com.et,www.combanketh.et,mpesa.et,safaricom.et,m-pesa.et,mpesa.ethiotelecom.et';
         $this->allowed = array_map('trim', explode(',', $envAllowed));
+        $this->proxyService = new ProxyService();
     }
 
     public function verifyByUrl(string $url): array {
@@ -129,6 +132,31 @@ class ReceiptVerifier {
     }
 
     private function fetch(string $url): array {
+        if ($this->proxyService && $this->proxyService->isEnabled()) {
+            $options = [
+                'timeout' => 15,
+                'follow_location' => true,
+                'max_redirects' => 5,
+                'verify_ssl' => true,
+                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ];
+            
+            $result = $this->proxyService->fetch($url, $options);
+            
+            if ($result['ok']) {
+                return [
+                    'ok' => true,
+                    'body' => $result['body'],
+                    'contentType' => $result['contentType'] ?? '',
+                    'via_proxy' => true,
+                    'proxy' => $result['proxy'] ?? null,
+                    'fetch_time_ms' => $result['fetch_time_ms'] ?? null,
+                ];
+            }
+            
+            return $result;
+        }
+        
         $ch = curl_init($url);
         $headers = [];
         curl_setopt_array($ch, [
@@ -163,7 +191,21 @@ class ReceiptVerifier {
         if (strlen($body) > 1024*1024) {
             $body = substr($body, 0, 1024*1024);
         }
-        return ['ok'=>true,'body'=>$body,'contentType'=>$ct];
+        return ['ok'=>true,'body'=>$body,'contentType'=>$ct,'via_proxy'=>false];
+    }
+    
+    public function getProxyStatus(): array {
+        if (!$this->proxyService) {
+            return ['enabled' => false];
+        }
+        return $this->proxyService->getConfig();
+    }
+    
+    public function checkProxyHealth(): array {
+        if (!$this->proxyService) {
+            return ['ok' => false, 'message' => 'Proxy service not initialized'];
+        }
+        return $this->proxyService->checkHealth();
     }
 
     private function truncate(string $s, int $max=50_000): string {

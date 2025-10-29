@@ -54,6 +54,16 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
   - **User Experience:** Instant confirmation (~4-6 seconds total processing time)
   - **Security:** TLS verification, amount tolerance, date validation, receiver matching
   - **Fallback:** Failed verifications automatically route to manual admin review
+- **Ethiopian Proxy System (NEW - Oct 29, 2025):** Advanced proxy infrastructure for fetching geo-restricted payment receipts:
+  - **ProxyService:** Centralized proxy management with support for HTTP, SOCKS4, and SOCKS5 proxies
+  - **Automatic Routing:** All receipt URL fetches automatically route through configured Ethiopian proxy
+  - **Multi-Proxy Support:** Primary proxy with unlimited fallback proxies for redundancy
+  - **Auto-Fallback System:** Automatically falls back to direct connection if all proxies fail
+  - **Health Monitoring:** Built-in health check endpoint (`/bot/proxy-health.php`) for monitoring proxy status
+  - **Performance Tracking:** Tracks fetch times, proxy usage, and success rates
+  - **Flexible Configuration:** Environment-based configuration with support for authenticated proxies
+  - **Transparent Integration:** Seamlessly integrated with receipt verification system
+  - **Security:** Supports proxy authentication, credential protection, TLS verification
 - **Payment Verification Module (Legacy):** Transaction ID verification via external validation API for backward compatibility. Includes screenshot collection, manual review workflows, and hidden fee calculations.
 - **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, network errors, Telegram API errors, and payment verification failures, with request ID display and user-friendly messages.
 
@@ -63,6 +73,8 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
     - **Telegram Bot API:** For bot interaction and messaging.
     - **StroWallet API:** For virtual crypto card management, user creation, cardholder lookup, card creation, card detail fetching, user profile information, wallet balances, and deposit address generation.
     - **Payment Validation API:** External microservice for verifying TeleBirr, M-Pesa, and CBE transaction authenticity.
+- **Infrastructure:**
+    - **Ethiopian Proxy Server (Optional):** Proxy server located in Ethiopia for fetching geo-restricted payment receipts. Can be self-hosted (Squid, tinyproxy) or commercial service (Bright Data, Smartproxy). Supports HTTP, SOCKS4, and SOCKS5 protocols with authentication.
 - **Databases:**
     - **PostgreSQL:** Used for admin panel, tracking, and temporary registration staging (14 tables: `admin_users`, `admin_actions`, `settings`, `deposits`, `deposit_payments`, `wallets`, `wallet_transactions`, `cards`, `card_transactions`, `users`, `user_registrations`, `broadcasts`, `broadcast_logs`, `giveaway_entries`).
     - **StroWallet Database:** Primary storage for all sensitive customer data, KYC documents, cards, and financial data.
