@@ -157,13 +157,14 @@ class PaymentServiceEnhanced
             $stmt = $this->pdo->prepare("
                 SELECT COUNT(*) FROM deposit_payments 
                 WHERE transaction_number = :txn 
-                AND status = 'completed'
+                AND transaction_number IS NOT NULL
+                AND status NOT IN ('rejected', 'cancelled')
             ");
             $stmt->execute([':txn' => $verification['transaction_id']]);
             
             if ($stmt->fetchColumn() > 0) {
                 $this->pdo->rollBack();
-                return ['success' => false, 'message' => 'Duplicate transaction'];
+                return ['success' => false, 'message' => 'Duplicate transaction - this receipt has already been used'];
             }
             
             $stmt = $this->pdo->prepare("
