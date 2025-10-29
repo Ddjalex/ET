@@ -1389,10 +1389,7 @@ function sendMessage($chatId, $text, $showKeyboard = false, $userId = null) {
                     ['text' => '💰 Wallet']
                 ],
                 [
-                    ['text' => '💵 Deposit ETB'],
-                    ['text' => '💸 Invite Friends']
-                ],
-                [
+                    ['text' => '💸 Invite Friends'],
                     ['text' => '🧑‍💻 Support']
                 ]
             ],
