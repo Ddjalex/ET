@@ -175,8 +175,32 @@ if ($userState === 'awaiting_amount') {
     exit;
 }
 
+// Check if user is awaiting screenshot upload
+if ($userState === 'awaiting_screenshot') {
+    if ($photo && is_array($photo) && count($photo) > 0) {
+        handleDepositScreenshot($chatId, $userId, $fileId);
+    } else {
+        sendMessage($chatId, "📸 Please send a screenshot of your payment confirmation.", false);
+    }
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
+// Check if user is awaiting transaction ID
+if ($userState === 'awaiting_transaction_id') {
+    if ($text) {
+        handleDepositTransactionId($chatId, $userId, $text);
+    } else {
+        sendMessage($chatId, "📝 Please enter your transaction ID/reference number.", false);
+    }
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // If user is in registration flow (not idle), route to registration handler
-if ($userState && $userState !== 'idle' && $userState !== 'completed' && $userState !== 'awaiting_amount') {
+if ($userState && $userState !== 'idle' && $userState !== 'completed' && !in_array($userState, ['awaiting_amount', 'awaiting_screenshot', 'awaiting_transaction_id'])) {
     handleRegistrationFlow($chatId, $userId, $text, $userState, $fileId);
     http_response_code(200);
     echo 'OK';
@@ -446,59 +470,107 @@ function handleAdminDepositMethodSelection($chatId, $userId, $callbackData) {
 }
 
 function handleUserDepositPaymentSelection($chatId, $userId, $callbackData) {
-    // Parse callback data: user_deposit_{method}_{usdAmount}_{etbAmount}
+    // Parse callback data: user_deposit_{method}_{usdAmount}_{etbAmountBeforeFee}
     $parts = explode('_', $callbackData);
     if (count($parts) < 5) {
         sendMessage($chatId, "❌ Invalid payment selection.", false);
         return;
     }
     
-    $method = $parts[2]; // telebirr, cbebirr, mpesa, bank
+    $methodCode = $parts[2]; // telebirr, cbebirr, mpesa, bank
     $usdAmount = floatval($parts[3]);
-    $etbAmount = floatval($parts[4]);
+    $etbAmountBeforeFee = floatval($parts[4]);
     
-    // Map method codes to display names and payment details
-    $paymentDetails = [
-        'telebirr' => [
-            'name' => 'TeleBirr',
-            'icon' => '📱',
-            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0912-345-678\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
-        ],
-        'cbebirr' => [
-            'name' => 'CBE Birr',
-            'icon' => '💵',
-            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0911-234-567\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
-        ],
-        'mpesa' => [
-            'name' => 'M-Pesa',
-            'icon' => '💳',
-            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0913-456-789\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
-        ],
-        'bank' => [
-            'name' => 'Bank Transfer',
-            'icon' => '🏦',
-            'instructions' => "Please transfer <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n🏦 <b>Bank:</b> Commercial Bank of Ethiopia\n👤 <b>Account Name:</b> StroWallet Services\n🔢 <b>Account Number:</b> 1000123456789\n\n📝 After payment, screenshot the confirmation and send it to support."
-        ]
+    // Get deposit fee from settings
+    $db = getDBConnection();
+    $depositFee = 500; // Default 500 ETB
+    if ($db) {
+        try {
+            $stmt = $db->query("SELECT value FROM settings WHERE key = 'deposit_fee'");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $feeData = json_decode($row['value'], true);
+                $depositFee = $feeData['flat'] ?? 500;
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching deposit fee: " . $e->getMessage());
+        }
+    }
+    
+    // Calculate total amount including fee
+    $totalEtbAmount = $etbAmountBeforeFee + $depositFee;
+    
+    // Get payment accounts from database
+    $paymentAccounts = [];
+    if ($db) {
+        try {
+            $stmt = $db->query("SELECT value FROM settings WHERE key = 'deposit_accounts'");
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $accounts = json_decode($row['value'], true);
+                foreach ($accounts as $account) {
+                    $key = strtolower(str_replace([' ', '-'], '', $account['method']));
+                    $paymentAccounts[$key] = $account;
+                }
+            }
+        } catch (Exception $e) {
+            error_log("Error fetching payment accounts: " . $e->getMessage());
+        }
+    }
+    
+    // Map method codes to payment account keys
+    $methodMap = [
+        'telebirr' => 'telebirr',
+        'cbebirr' => 'cbebirr',
+        'mpesa' => 'm-pesa',
+        'bank' => 'bank'
     ];
     
-    $details = $paymentDetails[$method] ?? null;
-    if (!$details) {
-        sendMessage($chatId, "❌ Invalid payment method.", false);
+    $accountKey = $methodMap[$methodCode] ?? $methodCode;
+    $account = $paymentAccounts[$accountKey] ?? null;
+    
+    if (!$account) {
+        sendMessage($chatId, "❌ Payment method not configured. Please contact support.", false);
         return;
     }
+    
+    // Map method icons
+    $icons = [
+        'telebirr' => '📱',
+        'cbebirr' => '💵',
+        'mpesa' => '💳',
+        'bank' => '🏦'
+    ];
+    
+    $icon = $icons[$methodCode] ?? '💳';
+    $methodName = $account['method'];
+    $accountName = $account['account_name'];
+    $accountNumber = $account['account_number'];
     
     // Send payment instructions to user
     $userMsg = "💰 <b>Payment Instructions</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n";
-    $userMsg .= "{$details['icon']} <b>Payment Method:</b> {$details['name']}\n\n";
+    $userMsg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n";
+    $userMsg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n";
+    $userMsg .= "{$icon} <b>Payment Method:</b> {$methodName}\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $userMsg .= $details['instructions'] . "\n\n";
+    $userMsg .= "Please send <b>" . number_format($totalEtbAmount, 2) . " ETB</b> to:\n\n";
+    $userMsg .= "📞 <b>Phone:</b> {$accountNumber}\n";
+    $userMsg .= "👤 <b>Name:</b> {$accountName}\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $userMsg .= "⚡ <b>Need help?</b> Contact 🧑‍💻 Support";
+    $userMsg .= "📸 <b>After payment, please send:</b>\n";
+    $userMsg .= "1️⃣ Screenshot of payment confirmation\n";
+    $userMsg .= "2️⃣ Transaction ID/Reference number\n\n";
+    $userMsg .= "📝 Send screenshot now, then enter transaction ID.";
     
     sendMessage($chatId, $userMsg, false);
+    
+    // Set user state to wait for screenshot
+    setUserDepositState($userId, 'awaiting_screenshot');
+    
+    // Store deposit info with payment method
+    storeDepositInfo($userId, $usdAmount, $etbAmountBeforeFee / $usdAmount, $totalEtbAmount, $methodName);
     
     // Get user info
     $userData = getUserRegistrationData($userId);
@@ -511,10 +583,12 @@ function handleUserDepositPaymentSelection($chatId, $userId, $callbackData) {
         $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
         $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
-        $adminMsg .= "💸 <b>Amount (ETB):</b> " . number_format($etbAmount, 2) . " ETB\n";
-        $adminMsg .= "{$details['icon']} <b>Payment Method:</b> {$details['name']}\n\n";
+        $adminMsg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n";
+        $adminMsg .= "💰 <b>Total (ETB):</b> " . number_format($totalEtbAmount, 2) . " ETB\n";
+        $adminMsg .= "{$icon} <b>Payment Method:</b> {$methodName}\n";
+        $adminMsg .= "📞 <b>Account:</b> {$accountNumber}\n\n";
         $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $adminMsg .= "⏳ <b>Status:</b> Waiting for user payment confirmation";
+        $adminMsg .= "⏳ <b>Status:</b> Waiting for user payment proof";
         
         sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
     }
@@ -683,6 +757,125 @@ function processDepositAmount($chatId, $userId, $amount) {
     curl_close($ch);
     
     // Admin will be notified after user selects payment method
+}
+
+function handleDepositScreenshot($chatId, $userId, $fileId) {
+    // Save screenshot file ID in temp data
+    $db = getDBConnection();
+    if ($db) {
+        try {
+            // Get existing deposit info
+            $stmt = $db->prepare("SELECT temp_data FROM user_registrations WHERE telegram_user_id = ?");
+            $stmt->execute([$userId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $depositData = $row && $row['temp_data'] ? json_decode($row['temp_data'], true) : [];
+            $depositData['screenshot_file_id'] = $fileId;
+            
+            // Update with screenshot
+            $stmt = $db->prepare("UPDATE user_registrations SET temp_data = ? WHERE telegram_user_id = ?");
+            $stmt->execute([json_encode($depositData), $userId]);
+        } catch (Exception $e) {
+            error_log("Error saving screenshot: " . $e->getMessage());
+        }
+    }
+    
+    // Change state to await transaction ID
+    setUserDepositState($userId, 'awaiting_transaction_id');
+    
+    // Ask for transaction ID
+    $msg = "✅ <b>Screenshot received!</b>\n\n";
+    $msg .= "📝 Now please enter your <b>Transaction ID</b> or <b>Reference Number</b>.\n\n";
+    $msg .= "💡 <i>Example: TXN123456789</i>";
+    
+    sendMessage($chatId, $msg, false);
+}
+
+function handleDepositTransactionId($chatId, $userId, $transactionId) {
+    // Get deposit info from temp data
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Database error. Please try again later.", false);
+        return;
+    }
+    
+    try {
+        // Get deposit data
+        $stmt = $db->prepare("SELECT temp_data FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$row || !$row['temp_data']) {
+            sendMessage($chatId, "❌ Deposit session expired. Please start over.", false);
+            setUserDepositState($userId, null);
+            return;
+        }
+        
+        $depositData = json_decode($row['temp_data'], true);
+        $depositData['transaction_id'] = trim($transactionId);
+        
+        // Clear deposit state
+        setUserDepositState($userId, null);
+        
+        // Send confirmation to user
+        $msg = "✅ <b>Deposit Proof Submitted!</b>\n\n";
+        $msg .= "💰 <b>Amount:</b> $" . number_format($depositData['usd_amount'], 2) . " USD\n";
+        $msg .= "💸 <b>Total Paid:</b> " . number_format($depositData['etb_amount'], 2) . " ETB\n";
+        $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
+        $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "⏳ <b>Your deposit is being verified.</b>\n\n";
+        $msg .= "You'll be notified once the admin approves your deposit.";
+        
+        sendMessage($chatId, $msg, true, $userId);
+        
+        // Get user info
+        $userData = getUserRegistrationData($userId);
+        $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
+        
+        // Send full details to admin
+        if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
+            $adminMsg = "💰 <b>Deposit Proof Received!</b>\n\n";
+            $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
+            $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
+            $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+            $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($depositData['usd_amount'], 2) . "\n";
+            $adminMsg .= "💸 <b>Total (ETB):</b> " . number_format($depositData['etb_amount'], 2) . " ETB\n";
+            $adminMsg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
+            $adminMsg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
+            $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+            $adminMsg .= "📸 <b>Screenshot:</b> See photo below\n\n";
+            $adminMsg .= "👇 <b>Please verify and approve</b>";
+            
+            sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
+            
+            // Forward screenshot to admin
+            if (isset($depositData['screenshot_file_id'])) {
+                $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendPhoto';
+                $payload = [
+                    'chat_id' => ADMIN_CHAT_ID,
+                    'photo' => $depositData['screenshot_file_id'],
+                    'caption' => "📸 Payment proof from {$fullName}\n🔖 TXN: " . htmlspecialchars($transactionId)
+                ];
+                
+                $ch = curl_init($url);
+                curl_setopt($ch, CURLOPT_POST, true);
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_exec($ch);
+                curl_close($ch);
+            }
+        }
+        
+        // Clear temp data
+        $stmt = $db->prepare("UPDATE user_registrations SET temp_data = NULL WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        
+    } catch (Exception $e) {
+        error_log("Error processing transaction ID: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error processing your submission. Please contact support.", false);
+    }
 }
 
 // ==================== COMMAND HANDLERS ====================
@@ -2654,19 +2847,24 @@ function getUserDepositState($userId) {
     return $userData['registration_state'] ?? null;
 }
 
-function storeDepositInfo($userId, $usdAmount, $exchangeRate, $etbAmount) {
+function storeDepositInfo($userId, $usdAmount, $exchangeRate, $etbAmount, $paymentMethod = '') {
     $db = getDBConnection();
     if (!$db) return false;
     
     try {
-        // Store in a temporary table or session
-        // For now, we'll log it - in production, you'd save to a pending_deposits table
-        error_log("Deposit info stored - User: $userId, USD: $usdAmount, Rate: $exchangeRate, ETB: $etbAmount");
+        // Store in user_registrations temp data
+        $depositData = json_encode([
+            'usd_amount' => $usdAmount,
+            'exchange_rate' => $exchangeRate,
+            'etb_amount' => $etbAmount,
+            'payment_method' => $paymentMethod,
+            'timestamp' => time()
+        ]);
         
-        // You can extend this to actually save to database
-        // Example:
-        // $stmt = $db->prepare("INSERT INTO pending_deposits (user_id, usd_amount, exchange_rate, etb_amount, created_at) VALUES (?, ?, ?, ?, NOW())");
-        // $stmt->execute([$userId, $usdAmount, $exchangeRate, $etbAmount]);
+        $stmt = $db->prepare("UPDATE user_registrations SET temp_data = ? WHERE telegram_user_id = ?");
+        $stmt->execute([$depositData, $userId]);
+        
+        error_log("Deposit info stored - User: $userId, USD: $usdAmount, ETB: $etbAmount, Method: $paymentMethod");
         
         return true;
     } catch (Exception $e) {
