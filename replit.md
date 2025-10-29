@@ -32,18 +32,22 @@ The admin panel features a premium glass-morphism design with enhanced visibilit
 ### System Design Choices
 The system utilizes a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with session-based authentication, CSRF protection, secure password change functionality, and audit trails. Database constraints are configured for a normalized schema. Key features include a comprehensive KYC approval workflow, an enhanced deposit system with exchange rate calculations, and real-time KYC status synchronization with the StroWallet API. All protected commands are gated behind KYC approval.
 
+**Payment Verification System:** Integrated automatic transaction verification for TeleBirr, M-Pesa, and CBE payments via external validation API. The system collects payment screenshots and transaction IDs, verifies transactions in real-time, and processes deposits automatically. Deposit fees are calculated in the background for better UX. All HTTP requests enforce TLS verification for security.
+
 ### Features Implemented
-- **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/invite`, `/support`, and associated reply keyboard buttons.
+- **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/deposit_etb`, `/invite`, `/support`, and associated reply keyboard buttons.
 - **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events; Giveaway entry tracking.
 - **Admin Panel KYC Management:** Real-time auto-refresh, manual sync, user filtering by KYC status.
 - **Broadcaster Module:** Full-featured broadcast system for admin-to-user communication supporting various content types (text, photo, video, poll), delivery channels (Telegram channel, in-app feed), scheduling, inline buttons, giveaway system, message pinning, comprehensive logging, status filtering, and a stats dashboard.
-- **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, network errors, and Telegram API errors, with request ID display and user-friendly messages.
+- **Payment Verification Module:** Automated deposit verification for TeleBirr, M-Pesa, CBE, and bank transfers. Features include screenshot collection, transaction ID verification via external validation API, automatic deposit processing for verified transactions, manual review fallback for failed verifications, and hidden fee calculations. Built with PaymentService class using PostgreSQL prepared statements and enforced TLS security.
+- **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, network errors, Telegram API errors, and payment verification failures, with request ID display and user-friendly messages.
 
 ## External Dependencies
 
 - **APIs:**
     - **Telegram Bot API:** For bot interaction and messaging.
     - **StroWallet API:** For virtual crypto card management, user creation, cardholder lookup, card creation, card detail fetching, user profile information, wallet balances, and deposit address generation.
+    - **Payment Validation API:** External microservice for verifying TeleBirr, M-Pesa, and CBE transaction authenticity.
 - **Databases:**
-    - **PostgreSQL:** Used for admin panel, tracking, and temporary registration staging (13 tables: `admin_users`, `admin_actions`, `settings`, `deposits`, `wallets`, `wallet_transactions`, `cards`, `card_transactions`, `users`, `user_registrations`, `broadcasts`, `broadcast_logs`, `giveaway_entries`).
+    - **PostgreSQL:** Used for admin panel, tracking, and temporary registration staging (14 tables: `admin_users`, `admin_actions`, `settings`, `deposits`, `deposit_payments`, `wallets`, `wallet_transactions`, `cards`, `card_transactions`, `users`, `user_registrations`, `broadcasts`, `broadcast_logs`, `giveaway_entries`).
     - **StroWallet Database:** Primary storage for all sensitive customer data, KYC documents, cards, and financial data.
