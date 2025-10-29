@@ -566,12 +566,11 @@ function processDepositAmount($chatId, $userId, $amount) {
     // Clear deposit state
     setUserDepositState($userId, null);
     
-    // Show calculation to user
+    // Show deposit summary to user (without exchange rate details)
     $userMsg = "💰 <b>Deposit Summary</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💱 <b>Exchange Rate:</b> 1 USD = " . number_format($exchangeRate, 2) . " ETB\n";
-    $userMsg .= "💸 <b>ETB to Pay:</b> " . number_format($etbAmount, 2) . " Birr\n\n";
+    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "✅ Your deposit request has been sent to the admin.\n\n";
     $userMsg .= "⏳ Please wait for payment instructions.";
