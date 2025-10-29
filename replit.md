@@ -32,14 +32,29 @@ The admin panel features a premium glass-morphism design with enhanced visibilit
 ### System Design Choices
 The system utilizes a dual webhook architecture for Telegram and StroWallet. It includes a robust admin panel with session-based authentication, CSRF protection, secure password change functionality, and audit trails. Database constraints are configured for a normalized schema. Key features include a comprehensive KYC approval workflow, an enhanced deposit system with exchange rate calculations, and real-time KYC status synchronization with the StroWallet API. All protected commands are gated behind KYC approval.
 
-**Payment Verification System:** Integrated automatic transaction verification for TeleBirr, M-Pesa, and CBE payments via external validation API. The system collects payment screenshots and transaction IDs, verifies transactions in real-time, and processes deposits automatically. Deposit fees are calculated in the background for better UX. All HTTP requests enforce TLS verification for security.
+**Payment Verification System:** Integrated automatic transaction verification for TeleBirr, M-Pesa, and CBE payments. The system accepts receipt URLs for instant automatic verification and approval without manual admin intervention. Features include:
+- **Receipt URL Verification:** Parses TeleBirr, CBE, and M-Pesa receipt URLs using DOM-aware parsers
+- **Automatic Validation:** Verifies amount, receiver account, and transaction date/time
+- **Instant Approval:** Credits StroWallet account automatically when all checks pass
+- **Admin Notifications:** Notifies admin after auto-approval with verification details
+- **Fallback to Manual Review:** Sends failed verifications to admin panel for manual processing
+- **TLS Security:** All HTTP requests enforce strict TLS verification
 
 ### Features Implemented
 - **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/deposit_etb`, `/invite`, `/support`, and associated reply keyboard buttons.
 - **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events; Giveaway entry tracking.
 - **Admin Panel KYC Management:** Real-time auto-refresh, manual sync, user filtering by KYC status.
 - **Broadcaster Module:** Full-featured broadcast system for admin-to-user communication supporting various content types (text, photo, video, poll), delivery channels (Telegram channel, in-app feed), scheduling, inline buttons, giveaway system, message pinning, comprehensive logging, status filtering, and a stats dashboard.
-- **Payment Verification Module:** Automated deposit verification for TeleBirr, M-Pesa, CBE, and bank transfers. Features include screenshot collection, transaction ID verification via external validation API, automatic deposit processing for verified transactions, manual review fallback for failed verifications, and hidden fee calculations. Built with PaymentService class using PostgreSQL prepared statements and enforced TLS security.
+- **Automatic Payment Verification Module (NEW - Oct 29, 2025):** Revolutionary receipt URL verification system for instant deposit approval:
+  - **AutoDepositProcessor:** Core automatic verification engine
+  - **DOM-Aware Parsers:** TeleBirrParser, CbeParser, MpesaParser with structured HTML parsing
+  - **Receipt URL Support:** Accepts receipt URLs from TeleBirr (`transactioninfo.ethiotelecom.et`), CBE (`apps.cbe.com.et`), M-Pesa
+  - **Verification Flow:** Amount matching (±5 ETB tolerance), receiver verification, date validation (must be today)
+  - **Auto-Approval:** Credits user's StroWallet account via API when verification succeeds
+  - **User Experience:** Instant confirmation (~4-6 seconds total processing time)
+  - **Security:** TLS verification, amount tolerance, date validation, receiver matching
+  - **Fallback:** Failed verifications automatically route to manual admin review
+- **Payment Verification Module (Legacy):** Transaction ID verification via external validation API for backward compatibility. Includes screenshot collection, manual review workflows, and hidden fee calculations.
 - **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, network errors, Telegram API errors, and payment verification failures, with request ID display and user-friendly messages.
 
 ## External Dependencies

@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/Parsers/TelebirrParser.php';
 require_once __DIR__ . '/Parsers/CbeParser.php';
+require_once __DIR__ . '/Parsers/MpesaParser.php';
 
 class ReceiptVerifier {
     private array $parsers;
@@ -11,8 +12,9 @@ class ReceiptVerifier {
         $this->parsers = [
             new TelebirrParser(),
             new CbeParser(),
+            new MpesaParser(),
         ];
-        $envAllowed = getenv('ALLOWED_DOMAINS') ?: 'transactioninfo.ethiotelecom.et,apps.cbe.com.et,www.combanketh.et';
+        $envAllowed = getenv('ALLOWED_DOMAINS') ?: 'transactioninfo.ethiotelecom.et,apps.cbe.com.et,www.combanketh.et,mpesa.et,safaricom.et,m-pesa.et,mpesa.ethiotelecom.et';
         $this->allowed = array_map('trim', explode(',', $envAllowed));
     }
 
