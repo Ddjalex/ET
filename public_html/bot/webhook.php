@@ -58,6 +58,9 @@ function getDBConnection() {
     }
 }
 
+// Load new deposit handler with payment verification
+require_once __DIR__ . '/deposit_handler_v2.php';
+
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
     if ($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'] !== TELEGRAM_SECRET_TOKEN) {
@@ -169,7 +172,7 @@ if ($text === '/register') {
 
 // Check if user is awaiting deposit amount input
 if ($userState === 'awaiting_amount') {
-    processDepositAmount($chatId, $userId, $text);
+    processDepositAmount_v2($chatId, $userId, $text);
     http_response_code(200);
     echo 'OK';
     exit;
@@ -178,7 +181,7 @@ if ($userState === 'awaiting_amount') {
 // Check if user is awaiting screenshot upload
 if ($userState === 'awaiting_screenshot') {
     if ($photo && is_array($photo) && count($photo) > 0) {
-        handleDepositScreenshot($chatId, $userId, $fileId);
+        handleDepositScreenshot_v2($chatId, $userId, $fileId);
     } else {
         sendMessage($chatId, "📸 Please send a screenshot of your payment confirmation.", false);
     }
@@ -190,7 +193,7 @@ if ($userState === 'awaiting_screenshot') {
 // Check if user is awaiting transaction ID
 if ($userState === 'awaiting_transaction_id') {
     if ($text) {
-        handleDepositTransactionId($chatId, $userId, $text);
+        handleDepositTransactionId_v2($chatId, $userId, $text);
     } else {
         sendMessage($chatId, "📝 Please enter your transaction ID/reference number.", false);
     }
@@ -261,7 +264,7 @@ function handleCallbackQuery($callbackQuery) {
     
     // Handle user deposit payment method selection - no registration check needed
     if (strpos($data, 'user_deposit_') === 0) {
-        handleUserDepositPaymentSelection($chatId, $userId, $data);
+        handleUserDepositPaymentSelection_v2($chatId, $userId, $data);
         return;
     }
     
