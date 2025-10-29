@@ -235,6 +235,12 @@ function handleCallbackQuery($callbackQuery) {
         return;
     }
     
+    // Handle user deposit payment method selection - no registration check needed
+    if (strpos($data, 'user_deposit_') === 0) {
+        handleUserDepositPaymentSelection($chatId, $userId, $data);
+        return;
+    }
+    
     // Handle ETB payment method selection - no registration check needed
     if (strpos($data, 'etb_payment_') === 0) {
         handleETBPaymentMethodSelection($chatId, $userId, $data);
@@ -439,6 +445,81 @@ function handleAdminDepositMethodSelection($chatId, $userId, $callbackData) {
     sendMessage($targetUserId, $userMsg, false);
 }
 
+function handleUserDepositPaymentSelection($chatId, $userId, $callbackData) {
+    // Parse callback data: user_deposit_{method}_{usdAmount}_{etbAmount}
+    $parts = explode('_', $callbackData);
+    if (count($parts) < 5) {
+        sendMessage($chatId, "❌ Invalid payment selection.", false);
+        return;
+    }
+    
+    $method = $parts[2]; // telebirr, cbebirr, mpesa, bank
+    $usdAmount = floatval($parts[3]);
+    $etbAmount = floatval($parts[4]);
+    
+    // Map method codes to display names and payment details
+    $paymentDetails = [
+        'telebirr' => [
+            'name' => 'TeleBirr',
+            'icon' => '📱',
+            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0912-345-678\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
+        ],
+        'cbebirr' => [
+            'name' => 'CBE Birr',
+            'icon' => '💵',
+            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0911-234-567\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
+        ],
+        'mpesa' => [
+            'name' => 'M-Pesa',
+            'icon' => '💳',
+            'instructions' => "Please send <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n📞 <b>Phone:</b> 0913-456-789\n👤 <b>Name:</b> StroWallet Deposit\n\n📝 After payment, screenshot the confirmation and send it to support."
+        ],
+        'bank' => [
+            'name' => 'Bank Transfer',
+            'icon' => '🏦',
+            'instructions' => "Please transfer <b>" . number_format($etbAmount, 2) . " ETB</b> to:\n\n🏦 <b>Bank:</b> Commercial Bank of Ethiopia\n👤 <b>Account Name:</b> StroWallet Services\n🔢 <b>Account Number:</b> 1000123456789\n\n📝 After payment, screenshot the confirmation and send it to support."
+        ]
+    ];
+    
+    $details = $paymentDetails[$method] ?? null;
+    if (!$details) {
+        sendMessage($chatId, "❌ Invalid payment method.", false);
+        return;
+    }
+    
+    // Send payment instructions to user
+    $userMsg = "💰 <b>Payment Instructions</b>\n\n";
+    $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $userMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
+    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n";
+    $userMsg .= "{$details['icon']} <b>Payment Method:</b> {$details['name']}\n\n";
+    $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $userMsg .= $details['instructions'] . "\n\n";
+    $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $userMsg .= "⚡ <b>Need help?</b> Contact 🧑‍💻 Support";
+    
+    sendMessage($chatId, $userMsg, false);
+    
+    // Get user info
+    $userData = getUserRegistrationData($userId);
+    $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
+    
+    // Notify admin about the deposit request
+    if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
+        $adminMsg = "💰 <b>New Deposit Request</b>\n\n";
+        $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
+        $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
+        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
+        $adminMsg .= "💸 <b>Amount (ETB):</b> " . number_format($etbAmount, 2) . " ETB\n";
+        $adminMsg .= "{$details['icon']} <b>Payment Method:</b> {$details['name']}\n\n";
+        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $adminMsg .= "⏳ <b>Status:</b> Waiting for user payment confirmation";
+        
+        sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
+    }
+}
+
 function answerCallbackQuery($callbackId, $text = '') {
     $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/answerCallbackQuery';
     $payload = ['callback_query_id' => $callbackId];
@@ -566,63 +647,42 @@ function processDepositAmount($chatId, $userId, $amount) {
     // Clear deposit state
     setUserDepositState($userId, null);
     
-    // Show deposit summary to user (without exchange rate details)
+    // Show deposit summary to user with payment method options
     $userMsg = "💰 <b>Deposit Summary</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
     $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($etbAmount, 2) . " ETB\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $userMsg .= "✅ Your deposit request has been sent to the admin.\n\n";
-    $userMsg .= "⏳ Please wait for payment instructions.";
-    sendMessage($chatId, $userMsg, false);
+    $userMsg .= "👇 <b>Select your payment method:</b>";
     
-    // Get user info
-    $userData = getUserRegistrationData($userId);
-    $fullName = ($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '');
-    
-    // Notify admin with payment method options
-    if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
-        $adminMsg = "💰 <b>New Deposit Request</b>\n\n";
-        $adminMsg .= "👤 <b>User:</b> {$fullName}\n";
-        $adminMsg .= "🆔 <b>Telegram ID:</b> <code>{$userId}</code>\n\n";
-        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $adminMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
-        $adminMsg .= "💱 <b>Exchange Rate:</b> " . number_format($exchangeRate, 2) . " ETB\n";
-        $adminMsg .= "💸 <b>Amount (ETB):</b> " . number_format($etbAmount, 2) . " Birr\n\n";
-        $adminMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $adminMsg .= "👇 <b>Select payment method:</b>";
-        
-        $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
-        $payload = [
-            'chat_id' => ADMIN_CHAT_ID,
-            'text' => $adminMsg,
-            'parse_mode' => 'HTML',
-            'reply_markup' => [
-                'inline_keyboard' => [
-                    [
-                        ['text' => '🏦 CBE', 'callback_data' => "deposit_method_cbe_{$userId}"],
-                        ['text' => '💵 CBE Birr', 'callback_data' => "deposit_method_cbe_birr_{$userId}"]
-                    ],
-                    [
-                        ['text' => '🏢 BOA', 'callback_data' => "deposit_method_boa_{$userId}"],
-                        ['text' => '📱 TeleBirr', 'callback_data' => "deposit_method_telebirr_{$userId}"]
-                    ],
-                    [
-                        ['text' => '💳 M-Pesa', 'callback_data' => "deposit_method_mpesa_{$userId}"],
-                        ['text' => '💰 Other', 'callback_data' => "deposit_method_other_{$userId}"]
-                    ]
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $userMsg,
+        'parse_mode' => 'HTML',
+        'reply_markup' => [
+            'inline_keyboard' => [
+                [
+                    ['text' => '📱 TeleBirr', 'callback_data' => "user_deposit_telebirr_{$usdAmount}_{$etbAmount}"],
+                    ['text' => '💵 CBE Birr', 'callback_data' => "user_deposit_cbebirr_{$usdAmount}_{$etbAmount}"]
+                ],
+                [
+                    ['text' => '💳 M-Pesa', 'callback_data' => "user_deposit_mpesa_{$usdAmount}_{$etbAmount}"],
+                    ['text' => '🏦 Bank Transfer', 'callback_data' => "user_deposit_bank_{$usdAmount}_{$etbAmount}"]
                 ]
             ]
-        ];
-        
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_exec($ch);
-        curl_close($ch);
-    }
+        ]
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_exec($ch);
+    curl_close($ch);
+    
+    // Admin will be notified after user selects payment method
 }
 
 // ==================== COMMAND HANDLERS ====================
