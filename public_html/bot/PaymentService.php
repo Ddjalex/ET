@@ -102,7 +102,7 @@ class PaymentService
             $stmt = $this->pdo->prepare("
                 UPDATE deposit_payments 
                 SET transaction_number = :txn, 
-                    status = 'pending_review'
+                    status = 'transaction_submitted'
                 WHERE id = :payment_id
             ");
             

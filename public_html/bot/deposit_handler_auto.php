@@ -133,9 +133,9 @@ function handleDepositReceiptUrl(int $chatId, int $userId, int $paymentId, strin
         // Update payment to manual review
         $stmt = $db->prepare("
             UPDATE deposit_payments 
-            SET status = 'pending_review',
+            SET status = 'transaction_submitted',
                 receipt_url = :receipt_url,
-                validation_status = 'failed_auto_verification',
+                validation_status = 'pending',
                 rejected_reason = :reason
             WHERE id = :payment_id
         ");
