@@ -94,6 +94,30 @@ class PaymentService
     }
     
     /**
+     * Add transaction ID to payment (for manual review)
+     */
+    public function addTransactionId(int $paymentId, string $transactionNumber): array
+    {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE deposit_payments 
+                SET transaction_number = :txn, 
+                    status = 'pending_review'
+                WHERE id = :payment_id
+            ");
+            
+            $stmt->execute([
+                ':payment_id' => $paymentId,
+                ':txn' => $transactionNumber
+            ]);
+            
+            return ['success' => true, 'message' => 'Transaction ID saved'];
+        } catch (Exception $e) {
+            return ['success' => false, 'message' => 'Failed to save transaction ID: ' . $e->getMessage()];
+        }
+    }
+    
+    /**
      * Update payment with transaction number and verify
      */
     public function addTransactionAndVerify(int $paymentId, string $transactionNumber): array

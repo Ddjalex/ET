@@ -381,20 +381,15 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
             return;
         }
         
-        // Verify transaction via PaymentService
+        // Skip automatic verification - Send all deposits to manual review
         $paymentService = getPaymentService();
         if (!$paymentService) {
             sendMessage($chatId, "❌ Service temporarily unavailable.", false);
             return;
         }
         
-        // Show verification in progress
-        $msg = "🔄 <b>Verifying your transaction...</b>\n\n";
-        $msg .= "Please wait...";
-        sendMessage($chatId, $msg, false);
-        
-        // Add transaction and verify
-        $verifyResult = $paymentService->addTransactionAndVerify($paymentId, trim($transactionId));
+        // Add transaction ID to payment record
+        $paymentService->addTransactionId($paymentId, trim($transactionId));
         
         // Clear deposit state
         setUserDepositState($userId, null);
@@ -403,66 +398,33 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
         $stmt = $db->prepare("UPDATE user_registrations SET temp_data = NULL WHERE telegram_user_id = ?");
         $stmt->execute([$userId]);
         
-        if ($verifyResult['success']) {
-            // Transaction verified successfully
-            $msg = "✅ <b>Payment Verified!</b>\n\n";
-            $msg .= "💰 <b>Amount:</b> $" . number_format($depositData['usd_amount'], 2) . " USD\n";
-            $msg .= "💸 <b>Total Paid:</b> " . number_format($depositData['etb_amount'], 2) . " ETB\n";
-            $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
-            $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
-            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-            $msg .= "✅ <b>Your payment has been verified successfully!</b>\n\n";
-            $msg .= "Your account will be credited shortly.";
+        // Send payment to manual review (no automatic verification)
+        $msg = "✅ <b>Payment Submitted!</b>\n\n";
+        $msg .= "💰 <b>Amount:</b> $" . number_format($depositData['usd_amount'], 2) . " USD\n";
+        $msg .= "💸 <b>Total Paid:</b> " . number_format($depositData['etb_amount'], 2) . " ETB\n";
+        $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
+        $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "⏳ <b>What's Next:</b>\n";
+        $msg .= "• Your payment is under review\n";
+        $msg .= "• Our admin team will verify it shortly\n";
+        $msg .= "• You'll be notified once approved\n\n";
+        $msg .= "💬 Contact support if you need help.";
+        
+        sendMessage($chatId, $msg, true, $userId);
+        
+        // Notify admin for manual verification
+        if (!empty(ADMIN_CHAT_ID) && ADMIN_CHAT_ID !== 'your_telegram_admin_chat_id_for_alerts') {
+            $adminMsg = "💰 <b>New Deposit - Manual Review</b>\n\n";
+            $adminMsg .= "👤 User ID: {$userId}\n";
+            $adminMsg .= "💵 Amount: $" . number_format($depositData['usd_amount'], 2) . " USD\n";
+            $adminMsg .= "💸 Total Paid: " . number_format($depositData['etb_amount'], 2) . " ETB\n";
+            $adminMsg .= "📱 Method: " . ($depositData['payment_method'] ?? 'N/A') . "\n";
+            $adminMsg .= "🔖 Transaction: <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
+            $adminMsg .= "📸 Screenshot and transaction details submitted.\n\n";
+            $adminMsg .= "⏳ Please verify in admin panel.";
             
-            sendMessage($chatId, $msg, true, $userId);
-            
-            // Process the verified deposit
-            $processResult = $paymentService->processVerifiedDeposit($paymentId);
-            
-            if ($processResult['success']) {
-                // Notify admin of successful deposit
-                if (!empty(ADMIN_CHAT_ID)) {
-                    $adminMsg = "💰 <b>New Verified Deposit</b>\n\n";
-                    $adminMsg .= "👤 User ID: {$userId}\n";
-                    $adminMsg .= "💵 Amount: $" . number_format($depositData['usd_amount'], 2) . " USD\n";
-                    $adminMsg .= "💸 Total Paid: " . number_format($depositData['etb_amount'], 2) . " ETB\n";
-                    $adminMsg .= "📱 Method: " . ($depositData['payment_method'] ?? 'N/A') . "\n";
-                    $adminMsg .= "🔖 Transaction: <code>" . htmlspecialchars($transactionId) . "</code>\n";
-                    $adminMsg .= "✅ Status: Verified & Processed";
-                    
-                    sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
-                }
-            }
-        } else {
-            // Verification failed
-            $msg = "❌ <b>Verification Failed</b>\n\n";
-            $msg .= "💰 <b>Amount:</b> $" . number_format($depositData['usd_amount'], 2) . " USD\n";
-            $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
-            $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
-            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-            $msg .= "❌ <b>Reason:</b> " . ($verifyResult['message'] ?? 'Transaction could not be verified') . "\n\n";
-            $msg .= "⏳ <b>What's Next:</b>\n";
-            $msg .= "• Your payment is under manual review\n";
-            $msg .= "• Our admin team will verify it shortly\n";
-            $msg .= "• You'll be notified once approved\n\n";
-            $msg .= "💬 Contact support if you need help.";
-            
-            sendMessage($chatId, $msg, true, $userId);
-            
-            // Notify admin for manual verification
-            if (!empty(ADMIN_CHAT_ID)) {
-                $adminMsg = "⚠️ <b>Manual Verification Required</b>\n\n";
-                $adminMsg .= "👤 User ID: {$userId}\n";
-                $adminMsg .= "💵 Amount: $" . number_format($depositData['usd_amount'], 2) . " USD\n";
-                $adminMsg .= "💸 Total Paid: " . number_format($depositData['etb_amount'], 2) . " ETB\n";
-                $adminMsg .= "📱 Method: " . ($depositData['payment_method'] ?? 'N/A') . "\n";
-                $adminMsg .= "🔖 Transaction: <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
-                $adminMsg .= "❌ Auto-verification failed:\n";
-                $adminMsg .= ($verifyResult['message'] ?? 'Unknown error') . "\n\n";
-                $adminMsg .= "Please verify manually in admin panel.";
-                
-                sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
-            }
+            sendMessage(ADMIN_CHAT_ID, $adminMsg, false);
         }
         
     } catch (Exception $e) {
