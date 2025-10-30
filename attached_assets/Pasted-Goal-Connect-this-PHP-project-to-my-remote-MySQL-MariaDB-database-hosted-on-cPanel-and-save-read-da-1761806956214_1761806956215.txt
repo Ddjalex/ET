@@ -1,0 +1,109 @@
+Goal: Connect this PHP project to my remote MySQL/MariaDB database hosted on cPanel and save/read data remotely using the secrets I already added. Do not write any UI. Keep everything minimal, secure, and organized.
+
+What you must do:
+
+Environment & config
+
+Read database credentials from these secrets: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, DB_SSL.
+
+Use UTF8MB4 and InnoDB assumptions. Fail fast with clear error messages.
+
+Print a clear success message when the DB connection works.
+
+File organization
+
+Create a reusable database connection module in the project root named “db.php” and use it everywhere.
+
+Create a connection test script named “test_db.php” that only checks the connection and prints a simple success/failure message.
+
+Create a “models” folder with two model classes: “UserModel.php” and “DepositPaymentsModel.php”.
+
+Create a “routes” folder with two HTTP endpoints: “register_user.php” and “create_deposit.php”.
+
+Do not add any frontend or HTML pages; endpoints must accept JSON or form-data.
+
+Data model assumptions (use exactly these field names)
+
+users: telegram_id, email, phone, first_name, last_name, status, created_at, updated_at.
+
+deposit_payments: user_id, telegram_id, amount_usd, amount_etb, exchange_rate (default 135.00), deposit_fee_etb (default 0), total_etb, payment_method (one of: telebirr, m-pesa, cbe, bank_transfer), payment_phone (optional), transaction_number (optional), validation_status (default pending), status (default pending), notes (optional), created_at, updated_at.
+
+wallets table exists but is not used by these two endpoints.
+
+Endpoint behavior
+
+register_user.php:
+
+Accepts: telegram_id, email, phone, first_name, last_name.
+
+If a user with the same telegram_id exists, return the existing record and a flag indicating it already existed.
+
+Otherwise, create the user and return a JSON object with ok=true and the new user_id.
+
+Respond only in JSON and set appropriate HTTP status codes on errors.
+
+create_deposit.php:
+
+Accepts: user_id, telegram_id, amount_usd, amount_etb, total_etb, payment_method; optional fields: payment_phone, transaction_number, exchange_rate, deposit_fee_etb, notes.
+
+Create a new row in deposit_payments with sensible defaults (validation_status=pending, status=pending).
+
+Return JSON with ok=true and deposit_payment_id.
+
+Respond only in JSON and set appropriate HTTP status codes on errors.
+
+Security & robustness
+
+Use prepared statements for all queries.
+
+Disable emulate prepares if supported.
+
+Centralize error handling and return concise messages safe for clients (no stack traces).
+
+Validate required fields and return clear “Missing field: <name>” messages.
+
+Ensure CORS is not changed; this is server-to-server use for now.
+
+Success criteria
+
+Running “test_db.php” prints a short message confirming the database connection works using my secrets.
+
+Calling “register_user.php” with valid data returns ok=true and a user record or an existing flag.
+
+Calling “create_deposit.php” with valid data returns ok=true and a deposit_payment_id.
+
+Both endpoints write and read from my remote database specified in DB_HOST, not any local database.
+
+Operational notes
+
+Assume tables already exist in cPanel (users, deposit_payments).
+
+If a column is missing, return a clear error indicating which column/table caused the issue, and propose the exact minimal ALTER TABLE statement in the console output (do not execute automatically).
+
+Provide a short README_DB.md summarizing:
+
+Which secrets are required.
+
+How to run the connection test.
+
+What each endpoint expects and returns (field lists, required vs optional).
+
+A brief troubleshooting section for common errors: access denied, cannot connect, unknown column.
+
+Deliverables:
+
+db.php (shared connection module)
+
+test_db.php (connection test script)
+
+models/UserModel.php
+
+models/DepositPaymentsModel.php
+
+routes/register_user.php
+
+routes/create_deposit.php
+
+README_DB.md (setup, usage, troubleshooting)
+
+Do not include any UI or front-end. Keep responses minimal and JSON-only.
