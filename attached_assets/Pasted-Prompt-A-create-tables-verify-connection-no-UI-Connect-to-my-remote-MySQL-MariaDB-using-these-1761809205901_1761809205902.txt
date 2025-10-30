@@ -1,0 +1,92 @@
+Prompt A — create tables + verify connection (no UI)
+
+Connect to my remote MySQL/MariaDB using these secrets:
+DB_HOST=vesper.hostns.io, DB_PORT=3306, DB_NAME=neodiggi_card, DB_USER=neodiggi_card, DB_PASSWORD=Ai12m3e4s5, DB_SSL=false.
+
+Tasks:
+
+Make a reusable PDO connection module that reads those secrets and uses utf8mb4.
+
+Add a tiny test script that only prints a clear message when the connection succeeds or fails.
+
+Create these tables if they don’t exist (InnoDB, utf8mb4, with created_at and updated_at timestamps):
+
+users (telegram_id, email, phone, first_name, last_name, status)
+
+wallets (user_id, balance_usd, balance_etb, status; user_id FK → users.id, on delete cascade)
+
+deposit_payments (user_id, telegram_id, amount_usd, amount_etb, exchange_rate, deposit_fee_etb, total_etb, payment_method, payment_phone, transaction_number, validation_status, status, notes)
+
+After creating tables, run the test script and show me the success message.
+
+Provide a brief README section (one page) explaining: where the connection file is, how to run the connection test, and how to re-run the table creation safely.
+
+Output: confirmation that the connection test prints a success message, and that all three tables exist in neodiggi_card.
+
+Prompt B — insert sample data + quick reads (no UI)
+
+Using the same connection:
+
+Create a minimal “data seeding” script that inserts:
+
+one user (telegram_id, email, phone, first_name, last_name).
+
+one deposit_payment linked to that user (fill reasonable defaults for exchange_rate=135.00, deposit_fee_etb=0, validation_status=pending, status=pending).
+
+Add a small “check” script that queries:
+
+user by telegram_id
+
+last 5 rows from deposit_payments
+
+Print concise JSON output for both queries so I can see the records clearly.
+
+Do not add any UI or HTML; console output only.
+
+Output: JSON printed to the console showing the inserted user and deposit row, proving remote writes/reads are working.
+
+Prompt C — minimal server endpoints (no UI, JSON only)
+
+Create two simple HTTP endpoints (no frontend):
+
+register_user: accepts telegram_id, email, phone, first_name, last_name.
+
+If a user with that telegram_id exists, return the existing record with a flag existing=true.
+
+Otherwise, create it and return { ok:true, user_id:<id> }.
+
+create_deposit: accepts user_id, telegram_id, amount_usd, amount_etb, total_etb, payment_method; optional: payment_phone, transaction_number, exchange_rate, deposit_fee_etb, notes.
+
+Insert a row into deposit_payments with sensible defaults (validation_status=pending, status=pending).
+
+Return { ok:true, deposit_payment_id:<id> }.
+Requirements:
+
+JSON in/out only, proper HTTP status codes on errors, validate required fields, use prepared statements.
+
+Reuse the same PDO connection module.
+
+Provide a short usage note with two example curl commands (just the commands as text in README; do not run).
+
+Output: confirmation of endpoint paths, required fields list, and where the code files live.
+
+Prompt D — production checklist (short)
+
+Write a one-page “Deploy/Move” checklist for me:
+
+How to export data from Replit (mysqldump command outline).
+
+How to import into cPanel phpMyAdmin.
+
+Which env secrets to use on cPanel (same values but DB_HOST=localhost if app runs on same server).
+
+Troubleshooting section for: “Access denied”, “Unknown database/table”, “Can’t connect”, “Timeout”.
+Keep it concise and action-oriented.
+
+quick sanity checks you can do right now
+
+In phpMyAdmin (neodiggi_card), after Prompt A: refresh → you should see users, wallets, deposit_payments.
+
+Run the connection test the agent created → it should print a success message.
+
+After Prompt B: check users and deposit_payments → you should see 1 row in each.
