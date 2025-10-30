@@ -1,25 +1,8 @@
 <?php
 /**
- * Updated Deposit Handler with Payment Verification
- * Integrates with PaymentService for transaction verification
+ * Deposit Handler - Manual Admin Review Only
+ * All deposits are routed to the admin panel for manual verification
  */
-
-require_once __DIR__ . '/PaymentService.php';
-
-// Configuration for validation API
-define('VALIDATION_API_BASE_URL', getenv('VALIDATION_API_BASE_URL') ?: 'https://your-validation-api.com');
-
-/**
- * Get Payment Service instance
- */
-function getPaymentService() {
-    $db = getDBConnection();
-    if (!$db) {
-        return null;
-    }
-    
-    return new PaymentService($db, VALIDATION_API_BASE_URL, BOT_TOKEN);
-}
 
 /**
  * Send message with return/cancel inline button
@@ -221,28 +204,41 @@ function handleUserDepositPaymentSelection_v2($chatId, $userId, $callbackData) {
     
     $paymentMethod = $methodMap[$methodCode] ?? $methodCode;
     
-    // Create payment via PaymentService
-    $paymentService = getPaymentService();
-    if (!$paymentService) {
-        sendMessage($chatId, "❌ Service temporarily unavailable.", false);
-        return;
-    }
-    
-    $result = $paymentService->createDepositPayment(
-        $dbUserId,
-        $userId,
-        $usdAmount,
-        $paymentMethod,
-        $exchangeRate,
-        $depositFee
-    );
-    
-    if (!$result['success']) {
+    // Create payment record directly in database for manual review
+    try {
+        $stmt = $db->prepare("
+            INSERT INTO deposit_payments (
+                user_id, telegram_id, amount_usd, amount_etb, 
+                exchange_rate, deposit_fee_etb, total_etb, 
+                payment_method, status, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW(), NOW())
+            RETURNING id
+        ");
+        
+        $stmt->execute([
+            $dbUserId,
+            $userId,
+            $usdAmount,
+            $etbAmount,
+            $exchangeRate,
+            $depositFee,
+            $totalEtbAmount,
+            $paymentMethod
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$result) {
+            sendMessage($chatId, "❌ Failed to create payment. Please try again.", false);
+            return;
+        }
+        
+        $paymentId = $result['id'];
+        
+    } catch (Exception $e) {
+        error_log("Error creating payment: " . $e->getMessage());
         sendMessage($chatId, "❌ Failed to create payment. Please try again.", false);
         return;
     }
-    
-    $paymentId = $result['payment_id'];
     
     // Get payment accounts from database
     $paymentAccounts = [];
@@ -353,16 +349,16 @@ function handleDepositScreenshot_v2($chatId, $userId, $fileId) {
         // Get file URL (optional)
         $fileUrl = getFileUrl($fileId);
         
-        // Update payment with screenshot via PaymentService
-        $paymentService = getPaymentService();
-        if (!$paymentService) {
-            sendMessage($chatId, "❌ Service temporarily unavailable.", false);
-            return;
-        }
-        
-        $result = $paymentService->addScreenshot($paymentId, $fileId, $fileUrl);
-        
-        if (!$result['success']) {
+        // Update payment with screenshot directly in database
+        try {
+            $stmt = $db->prepare("
+                UPDATE deposit_payments 
+                SET screenshot_file_id = ?, screenshot_url = ?, updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$fileId, $fileUrl, $paymentId]);
+        } catch (Exception $e) {
+            error_log("Error saving screenshot: " . $e->getMessage());
             sendMessage($chatId, "❌ Failed to save screenshot. Please try again.", false);
             return;
         }
@@ -414,15 +410,19 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
             return;
         }
         
-        // Skip automatic verification - Send all deposits to manual review
-        $paymentService = getPaymentService();
-        if (!$paymentService) {
-            sendMessage($chatId, "❌ Service temporarily unavailable.", false);
+        // Add transaction ID to payment record - all deposits go to manual review
+        try {
+            $stmt = $db->prepare("
+                UPDATE deposit_payments 
+                SET transaction_number = ?, updated_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([trim($transactionId), $paymentId]);
+        } catch (Exception $e) {
+            error_log("Error saving transaction ID: " . $e->getMessage());
+            sendMessage($chatId, "❌ Failed to save transaction ID. Please try again.", false);
             return;
         }
-        
-        // Add transaction ID to payment record
-        $paymentService->addTransactionId($paymentId, trim($transactionId));
         
         // Clear deposit state
         setUserDepositState($userId, null);

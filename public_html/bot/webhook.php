@@ -55,11 +55,8 @@ function getDBConnection() {
     }
 }
 
-// Load new deposit handler with payment verification
+// Load deposit handler - manual admin review only
 require_once __DIR__ . '/deposit_handler_v2.php';
-
-// Load automatic verification deposit handler
-require_once __DIR__ . '/deposit_handler_auto.php';
 
 // Verify Telegram secret token if configured
 if (TELEGRAM_SECRET_TOKEN !== '' && isset($_SERVER['HTTP_X_TELEGRAM_BOT_API_SECRET_TOKEN'])) {
@@ -181,7 +178,7 @@ if ($userState === 'awaiting_amount') {
 // Check if user is awaiting screenshot upload
 if ($userState === 'awaiting_screenshot') {
     if ($photo && is_array($photo) && count($photo) > 0) {
-        handleDepositScreenshot_auto($chatId, $userId, $fileId);
+        handleDepositScreenshot_v2($chatId, $userId, $fileId);
     } else {
         sendMessageWithReturn($chatId, "📸 Please send a screenshot of your payment confirmation.", '❌ Cancel Deposit', 'cancel');
     }
@@ -190,13 +187,13 @@ if ($userState === 'awaiting_screenshot') {
     exit;
 }
 
-// Check if user is awaiting transaction ID or receipt URL
+// Check if user is awaiting transaction ID - all deposits go to manual admin review
 if ($userState === 'awaiting_transaction_id') {
     if ($text) {
-        // Use new handler that supports both URLs and transaction IDs
-        handleDepositTransactionSubmission($chatId, $userId, $text);
+        // Route all deposits to manual admin review (no automatic verification)
+        handleDepositTransactionId_v2($chatId, $userId, $text);
     } else {
-        sendMessage($chatId, "📝 Please enter your receipt URL or transaction ID.", false);
+        sendMessage($chatId, "📝 Please enter your transaction ID or reference number.", false);
     }
     http_response_code(200);
     echo 'OK';
