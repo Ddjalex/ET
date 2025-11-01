@@ -31,7 +31,7 @@ fi
 
 # Restore database
 echo "📁 Restoring from schema.sql..."
-psql $DATABASE_URL < schema.sql
+psql "$DATABASE_URL" < schema.sql
 
 if [ $? -eq 0 ]; then
     echo ""
@@ -40,7 +40,7 @@ if [ $? -eq 0 ]; then
     echo "📊 Verifying restored data..."
     
     # Show table counts
-    psql $DATABASE_URL -c "\
+    psql "$DATABASE_URL" -c "\
         SELECT tablename, \
                (xpath('/row/count/text()', \
                       query_to_xml('SELECT COUNT(*) FROM \"' || tablename || '\"', false, false, '')))[1]::text::int as row_count \

@@ -15,7 +15,7 @@ fi
 
 # Create backup
 echo "📊 Exporting database structure and data..."
-pg_dump $DATABASE_URL --clean --if-exists --inserts > schema.sql
+pg_dump "$DATABASE_URL" --clean --if-exists --inserts > schema.sql
 
 if [ $? -eq 0 ]; then
     echo ""
