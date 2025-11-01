@@ -1070,9 +1070,51 @@ function handleRegisterStart($chatId, $userId) {
 }
 
 function handleCreateCard($chatId, $userId) {
-    // Simply redirect to the deposit flow (handleCreateCardCallback)
-    // This shows the deposit prompt with "Deposit to Wallet" button
-    handleCreateCardCallback($chatId, $userId);
+    sendTypingAction($chatId);
+    
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
+    
+    // Get user from database to check wallet
+    $db = getDBConnection();
+    $user = dbFetchOne("SELECT * FROM users WHERE telegram_id = ?", [$userId], $db);
+    
+    if (!$user) {
+        sendMessage($chatId, "❌ User not found. Please register first using /register", false);
+        return;
+    }
+    
+    // Check wallet balance
+    $wallet = dbFetchOne("SELECT * FROM wallets WHERE user_id = ?", [$user['id']], $db);
+    $walletBalance = $wallet ? (float)$wallet['balance_usd'] : 0.00;
+    
+    // Minimum card creation amount (e.g., $5)
+    $minimumAmount = 5.00;
+    
+    if ($walletBalance < $minimumAmount) {
+        // User needs to deposit first
+        handleCreateCardCallback($chatId, $userId);
+        return;
+    }
+    
+    // User has sufficient balance - proceed with card creation via StroWallet API
+    $result = callStroWalletAPI('/bitvcard/create-card', 'POST', [
+        'card_type' => 'virtual',
+        'amount' => $walletBalance
+    ], true);
+    
+    if (isset($result['error'])) {
+        sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
+        return;
+    }
+    
+    $msg = "✅ <b>Card Created Successfully!</b>\n\n";
+    $msg .= "💳 Your virtual card has been created and funded with $" . number_format($walletBalance, 2) . "\n\n";
+    $msg .= "Use /cards to view your card details.";
+    
+    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleMyCards($chatId, $userId) {
@@ -1179,31 +1221,33 @@ function handleWallet($chatId, $userId) {
         return;
     }
     
-    $result = callStroWalletAPI('/wallet/balance', 'GET', [], false);
+    // Get user from database
+    $db = getDBConnection();
+    $user = dbFetchOne("SELECT * FROM users WHERE telegram_id = ?", [$userId], $db);
     
-    if (isset($result['error'])) {
-        sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
+    if (!$user) {
+        sendMessage($chatId, "❌ User not found. Please register first using /register", false);
         return;
     }
     
-    $walletData = $result['data'] ?? $result;
-    $balances = $walletData['balances'] ?? $walletData;
+    // Get wallet balance from local database
+    $wallet = dbFetchOne("SELECT * FROM wallets WHERE user_id = ?", [$user['id']], $db);
+    
+    $balanceUSD = $wallet ? (float)$wallet['balance_usd'] : 0.00;
+    $balanceETB = $wallet ? (float)$wallet['balance_etb'] : 0.00;
     
     $msg = "💰 <b>Your Wallet</b>\n\n";
-    
-    if (is_array($balances)) {
-        foreach ($balances as $currency => $amount) {
-            $emoji = getCurrencyEmoji($currency);
-            $msg .= "{$emoji} <b>{$currency}:</b> " . formatBalance($amount, $currency) . "\n";
-        }
-    } else {
-        $usdBalance = $walletData['usd_balance'] ?? $walletData['balance'] ?? '0.00';
-        $msg .= "💵 <b>USD:</b> $" . number_format((float)$usdBalance, 2) . "\n";
-    }
-    
+    $msg .= "💵 <b>USD:</b> $" . number_format($balanceUSD, 2) . "\n";
+    $msg .= "💴 <b>ETB:</b> " . number_format($balanceETB, 2) . " Birr\n";
     $msg .= "\n━━━━━━━━━━━━━━━━━━\n";
-    $msg .= "📥 To deposit USDT (TRC20), use:\n";
-    $msg .= "/deposit_trc20";
+    
+    if ($balanceUSD > 0) {
+        $msg .= "✅ You have funds available!\n";
+        $msg .= "💳 Use /create_card to create a virtual card\n\n";
+    } else {
+        $msg .= "📥 To add funds, use:\n";
+        $msg .= "💵 Deposit ETB - Click button below\n";
+    }
     
     sendMessage($chatId, $msg, true, $userId);
 }
