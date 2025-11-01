@@ -25,7 +25,7 @@ define('TELEGRAM_SECRET_TOKEN', $_ENV['TELEGRAM_SECRET_TOKEN'] ?? getenv('TELEGR
 define('USE_MOCK_DATA', ($_ENV['USE_MOCK_DATA'] ?? getenv('USE_MOCK_DATA')) === 'true' || ($_ENV['USE_MOCK_DATA'] ?? getenv('USE_MOCK_DATA')) === '1');
 
 // Sandbox mode for StroWallet API (bypasses IP whitelist and allows testing without real balance)
-define('USE_SANDBOX_MODE', false);
+define('USE_SANDBOX_MODE', true);
 
 // Database configuration
 define('DATABASE_URL', $_ENV['DATABASE_URL'] ?? getenv('DATABASE_URL') ?: '');
