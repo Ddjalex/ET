@@ -68,38 +68,62 @@ function creditCustomerWallet($customerEmail, $amount, $description = 'Deposit')
         return ['success' => false, 'error' => 'Public key not configured'];
     }
     
+    error_log("Attempting to credit wallet for $customerEmail: $" . $amount . " USD - Note: $description");
+    
+    // Try multiple endpoints that might work for wallet credits/top-ups
+    $endpoints = [
+        '/wallet/fund',
+        '/wallet/topup', 
+        '/wallet/credit',
+        '/bitvcard/fund-wallet',
+        '/user/fund-wallet'
+    ];
+    
     $data = [
         'amount' => (float)$amount,
         'currency' => 'USD',
         'receiver' => $customerEmail,
+        'customer_email' => $customerEmail,
         'note' => $description,
-        'public_key' => $publicKey
+        'public_key' => $publicKey,
+        'mode' => 'sandbox'
     ];
     
-    error_log("Transferring funds to $customerEmail: $" . $amount . " USD (Sandbox mode) - Note: $description");
     error_log("Request data: " . json_encode($data));
     
-    $result = callStroWalletAPI_Admin('/wallet/transfer', 'POST', $data);
-    
-    error_log("StroWallet API Response: " . json_encode($result));
-    
-    if (isset($result['error'])) {
-        error_log("Wallet transfer failed: " . json_encode($result));
-        return ['success' => false, 'error' => $result['error']];
+    foreach ($endpoints as $endpoint) {
+        error_log("Trying endpoint: $endpoint");
+        $result = callStroWalletAPI_Admin($endpoint, 'POST', $data);
+        
+        error_log("Response from $endpoint: " . json_encode($result));
+        
+        // Check if this endpoint worked
+        if (!isset($result['error']) || !str_contains($result['error'], '405')) {
+            // Not a 405 error, this might be the right endpoint
+            if (isset($result['status']) && $result['status'] === 'success') {
+                error_log("✅ Wallet credit successful using endpoint: $endpoint");
+                return ['success' => true, 'data' => $result, 'endpoint_used' => $endpoint];
+            }
+            
+            if (isset($result['success']) && $result['success'] === true) {
+                error_log("✅ Wallet credit successful using endpoint: $endpoint");
+                return ['success' => true, 'data' => $result, 'endpoint_used' => $endpoint];
+            }
+            
+            // If we got a different error (not 405), log it and continue
+            if (isset($result['error'])) {
+                error_log("❌ Endpoint $endpoint returned error: " . $result['error']);
+            }
+        }
     }
     
-    if (isset($result['status']) && $result['status'] === 'success') {
-        error_log("Wallet transfer successful to $customerEmail");
-        return ['success' => true, 'data' => $result];
-    }
-    
-    if (isset($result['success']) && $result['success'] === true) {
-        error_log("Wallet transfer successful to $customerEmail");
-        return ['success' => true, 'data' => $result];
-    }
-    
-    error_log("Unexpected response: " . json_encode($result));
-    return ['success' => false, 'error' => 'Unexpected API response', 'response' => $result];
+    // If all endpoints failed
+    error_log("❌ All endpoints failed. Please contact StroWallet support for the correct wallet credit/top-up endpoint.");
+    return [
+        'success' => false, 
+        'error' => 'Unable to credit wallet. The correct API endpoint needs to be confirmed with StroWallet support.',
+        'support_contact' => 'hello@strowallet.com or WhatsApp: +234 913 449 8570'
+    ];
 }
 
 function getCustomerWalletBalance($customerEmail) {

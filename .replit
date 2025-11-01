@@ -42,6 +42,10 @@ externalPort = 3001
 localPort = 44125
 externalPort = 3000
 
+[[ports]]
+localPort = 46323
+externalPort = 3003
+
 [nix]
 channel = "stable-25_05"
 packages = ["php82Extensions.pdo_pgsql", "php82Extensions.pgsql"]
