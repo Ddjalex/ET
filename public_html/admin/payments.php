@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
             $db->beginTransaction();
             
             if ($action === 'approve') {
-                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name, u.email 
+                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name, u.email, u.strowallet_user_id 
                                       FROM deposit_payments dp 
                                       JOIN users u ON dp.user_id = u.id 
                                       WHERE dp.id = ? AND dp.status = 'pending'", [$paymentId], $db);
@@ -32,42 +32,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     throw new Exception('Payment not found or already processed');
                 }
                 
+                $userCard = dbFetchOne("SELECT strow_card_id FROM cards WHERE user_id = ? AND status = 'active' ORDER BY created_at DESC LIMIT 1", [$payment['user_id']], $db);
+                
+                if (!$userCard || empty($userCard['strow_card_id'])) {
+                    throw new Exception('User does not have an active card. Please ask them to create a card first using /create_card command.');
+                }
+                
+                $cardId = $userCard['strow_card_id'];
                 $customerEmail = $payment['email'];
                 $amountUSD = (float)$payment['amount_usd'];
                 
-                error_log("Processing payment approval: Payment ID #{$paymentId}, Customer: {$customerEmail}, Amount: \${$amountUSD}");
+                error_log("Processing payment approval: Payment ID #{$paymentId}, Customer: {$customerEmail}, Card: {$cardId}, Amount: \${$amountUSD}");
                 
-                $walletResult = creditCustomerWallet(
-                    $customerEmail,
+                $fundResult = fundUserCard(
+                    $cardId,
                     $amountUSD,
                     "Deposit approval - Payment #{$paymentId}"
                 );
                 
-                if (!$walletResult['success']) {
-                    error_log("StroWallet credit failed: " . ($walletResult['error'] ?? 'Unknown error'));
-                    throw new Exception('Failed to credit wallet: ' . ($walletResult['error'] ?? 'Unknown error'));
+                if (!$fundResult['success']) {
+                    error_log("StroWallet fund card failed: " . ($fundResult['error'] ?? 'Unknown error'));
+                    throw new Exception('Failed to fund card: ' . ($fundResult['error'] ?? 'Unknown error'));
                 }
                 
-                error_log("StroWallet credit successful for {$customerEmail}: \${$amountUSD}");
+                error_log("StroWallet card funded successfully for {$customerEmail} (Card: {$cardId}): \${$amountUSD}");
                 
-                $strowalletData = isset($walletResult['data']) ? json_encode($walletResult['data']) : null;
+                $strowalletData = isset($fundResult['data']) ? json_encode($fundResult['data']) : null;
                 
                 dbQuery("UPDATE deposit_payments 
                         SET status = 'completed', 
                             verified_by = 'admin', 
                             verified_at = NOW(), 
                             completed_at = NOW(),
-                            notes = COALESCE(notes, '') || E'\n[StroWallet] Credited $' || ? || ' to customer wallet. Response: ' || COALESCE(?, 'N/A')
+                            notes = COALESCE(notes, '') || E'\n[StroWallet] Funded card ' || ? || ' with $' || ? || '. Response: ' || COALESCE(?, 'N/A')
                         WHERE id = ?", 
-                       [$amountUSD, $strowalletData, $paymentId], $db);
+                       [$cardId, $amountUSD, $strowalletData, $paymentId], $db);
                 
                 dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, target_id, action_description, payload) 
-                        VALUES (?, 'approve_payment', 'deposit_payments', ?, 'Approved payment and credited StroWallet', ?)",
+                        VALUES (?, 'approve_payment', 'deposit_payments', ?, 'Approved payment and funded StroWallet card', ?)",
                        [$adminId, $paymentId, json_encode([
                            'amount_usd' => $amountUSD, 
                            'user_id' => $payment['user_id'],
                            'customer_email' => $customerEmail,
-                           'strowallet_response' => $walletResult['data'] ?? null
+                           'card_id' => $cardId,
+                           'strowallet_response' => $fundResult['data'] ?? null
                        ])], $db);
                 
                 $db->commit();
@@ -76,9 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                 $congratsMsg .= "✅ Your payment has been approved!\n\n";
                 $congratsMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
                 $congratsMsg .= "💵 <b>Amount:</b> $" . number_format($payment['amount_usd'], 2) . " USD\n";
-                $congratsMsg .= "💰 <b>Status:</b> Completed ✅\n\n";
+                $congratsMsg .= "💳 <b>Status:</b> Completed ✅\n\n";
                 $congratsMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-                $congratsMsg .= "Your funds have been credited to your account.\n";
+                $congratsMsg .= "Your card has been funded successfully!\n";
+                $congratsMsg .= "You can now use your virtual card for purchases.\n\n";
                 $congratsMsg .= "Thank you for using our service!";
                 
                 if (defined('BOT_TOKEN') && BOT_TOKEN) {
@@ -100,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     curl_close($ch);
                 }
                 
-                $message = "Payment approved successfully! $" . number_format($payment['amount_usd'], 2) . " approved for user.";
+                $message = "Payment approved successfully! $" . number_format($payment['amount_usd'], 2) . " funded to user's card (ID: " . substr($cardId, 0, 8) . "...).";
                 $messageType = 'success';
                 
             } elseif ($action === 'reject') {

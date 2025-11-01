@@ -126,6 +126,57 @@ function creditCustomerWallet($customerEmail, $amount, $description = 'Deposit')
     ];
 }
 
+function fundUserCard($cardId, $amount, $description = 'Deposit') {
+    $publicKey = $_ENV['STROWALLET_PUBLIC_KEY'] ?? getenv('STROWALLET_PUBLIC_KEY') ?: '';
+    
+    if (empty($publicKey)) {
+        error_log("StroWallet public key not configured");
+        return ['success' => false, 'error' => 'Public key not configured'];
+    }
+    
+    if (empty($cardId)) {
+        error_log("Card ID is required for funding");
+        return ['success' => false, 'error' => 'Card ID is required'];
+    }
+    
+    error_log("Attempting to fund card $cardId with $" . $amount . " USD - Note: $description");
+    
+    $data = [
+        'card_id' => $cardId,
+        'amount' => (string)$amount,
+        'public_key' => $publicKey,
+        'mode' => 'sandbox'
+    ];
+    
+    error_log("Fund Card Request: " . json_encode($data));
+    
+    $result = callStroWalletAPI_Admin('/fund-card/', 'POST', $data);
+    
+    error_log("Fund Card Response: " . json_encode($result));
+    
+    if (isset($result['error'])) {
+        error_log("❌ Fund card failed: " . $result['error']);
+        return ['success' => false, 'error' => $result['error']];
+    }
+    
+    if (isset($result['status']) && $result['status'] === 'success') {
+        error_log("✅ Card funded successfully: $cardId with $" . $amount);
+        return ['success' => true, 'data' => $result];
+    }
+    
+    if (isset($result['success']) && $result['success'] === true) {
+        error_log("✅ Card funded successfully: $cardId with $" . $amount);
+        return ['success' => true, 'data' => $result];
+    }
+    
+    error_log("❌ Fund card failed with unknown response structure");
+    return [
+        'success' => false, 
+        'error' => 'Unable to fund card. Please check API response.',
+        'response' => $result
+    ];
+}
+
 function getCustomerWalletBalance($customerEmail) {
     $result = callStroWalletAPI_Admin('/wallet/balance', 'GET');
     
