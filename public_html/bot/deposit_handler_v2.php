@@ -266,20 +266,8 @@ function handleUserDepositPaymentSelection_v2($chatId, $userId, $callbackData) {
     // Set user state to wait for screenshot
     setUserDepositState($userId, 'awaiting_screenshot');
     
-    // Store payment ID in temp_data for later use
-    try {
-        $tempData = json_encode([
-            'payment_id' => $paymentId,
-            'usd_amount' => $usdAmount,
-            'etb_amount' => $totalEtbAmount,
-            'payment_method' => $paymentMethod
-        ]);
-        
-        $stmt = $db->prepare("UPDATE user_registrations SET temp_data = ? WHERE telegram_user_id = ?");
-        $stmt->execute([$tempData, $userId]);
-    } catch (Exception $e) {
-        error_log("Error storing payment ID: " . $e->getMessage());
-    }
+    // Payment ID is stored in deposit_payments table, no need to store separately
+    // We'll retrieve it later based on the most recent pending payment for this user
 }
 
 /**
@@ -292,26 +280,31 @@ function handleDepositScreenshot_v2($chatId, $userId, $fileId) {
         return;
     }
     
-    // Get payment ID from temp data
+    // Get the most recent pending payment for this user
     try {
-        $stmt = $db->prepare("SELECT temp_data FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt = $db->prepare("
+            SELECT id, amount_usd, total_etb, payment_method 
+            FROM deposit_payments 
+            WHERE telegram_id = ? AND status = 'pending' AND screenshot_file_id IS NULL
+            ORDER BY created_at DESC 
+            LIMIT 1
+        ");
         $stmt->execute([$userId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if (!$row || !$row['temp_data']) {
+        if (!$payment) {
             sendMessage($chatId, "❌ Payment session expired. Please start over.", false);
             setUserDepositState($userId, null);
             return;
         }
         
-        $depositData = json_decode($row['temp_data'], true);
-        $paymentId = $depositData['payment_id'] ?? null;
-        
-        if (!$paymentId) {
-            sendMessage($chatId, "❌ Payment information not found. Please start over.", false);
-            setUserDepositState($userId, null);
-            return;
-        }
+        $paymentId = $payment['id'];
+        $depositData = [
+            'payment_id' => $payment['id'],
+            'usd_amount' => $payment['amount_usd'],
+            'etb_amount' => $payment['total_etb'],
+            'payment_method' => $payment['payment_method']
+        ];
         
         // Get file URL (optional)
         $fileUrl = getFileUrl($fileId);
@@ -357,25 +350,30 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
     }
     
     try {
-        // Get payment ID from temp data
-        $stmt = $db->prepare("SELECT temp_data FROM user_registrations WHERE telegram_user_id = ?");
+        // Get the most recent pending payment for this user
+        $stmt = $db->prepare("
+            SELECT id, amount_usd, total_etb, payment_method 
+            FROM deposit_payments 
+            WHERE telegram_id = ? AND status = 'pending' AND screenshot_file_id IS NOT NULL
+            ORDER BY created_at DESC 
+            LIMIT 1
+        ");
         $stmt->execute([$userId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        if (!$row || !$row['temp_data']) {
+        if (!$payment) {
             sendMessage($chatId, "❌ Payment session expired. Please start over.", false);
             setUserDepositState($userId, null);
             return;
         }
         
-        $depositData = json_decode($row['temp_data'], true);
-        $paymentId = $depositData['payment_id'] ?? null;
-        
-        if (!$paymentId) {
-            sendMessage($chatId, "❌ Payment information not found. Please start over.", false);
-            setUserDepositState($userId, null);
-            return;
-        }
+        $paymentId = $payment['id'];
+        $depositData = [
+            'payment_id' => $payment['id'],
+            'usd_amount' => $payment['amount_usd'],
+            'etb_amount' => $payment['total_etb'],
+            'payment_method' => $payment['payment_method']
+        ];
         
         // Add transaction ID to payment record - all deposits go to manual review
         try {
@@ -393,10 +391,6 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
         
         // Clear deposit state
         setUserDepositState($userId, null);
-        
-        // Clear temp data
-        $stmt = $db->prepare("UPDATE user_registrations SET temp_data = NULL WHERE telegram_user_id = ?");
-        $stmt->execute([$userId]);
         
         // Send payment to manual review (no automatic verification)
         $msg = "✅ <b>Payment Submitted!</b>\n\n";
