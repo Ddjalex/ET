@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                 
                 dbQuery("INSERT INTO wallet_transactions (wallet_id, user_id, transaction_type, amount_usd, amount_etb, balance_before_usd, balance_after_usd, reference, description, status) 
                         VALUES (?, ?, 'deposit', ?, ?, ?, ?, ?, ?, 'completed')",
-                       [$walletId, $userId, $amountUSD, $payment['amount_etb'], $balanceBefore, $balanceAfter, 'PAY-' . $paymentId, 'Deposit payment approved by admin', 'completed'], $db);
+                       [$walletId, $userId, $amountUSD, $payment['amount_etb'], $balanceBefore, $balanceAfter, 'PAY-' . $paymentId, 'Deposit payment approved by admin'], $db);
                 
                 dbQuery("UPDATE deposit_payments 
                         SET status = 'completed', 
