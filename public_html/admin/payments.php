@@ -3,6 +3,7 @@ $pageTitle = 'Payment Verification';
 $currentPage = 'payments';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/strowallet_helper.php';
 
 $message = '';
 $messageType = '';
@@ -22,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
             $db->beginTransaction();
             
             if ($action === 'approve') {
-                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name 
+                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name, u.email 
                                       FROM deposit_payments dp 
                                       JOIN users u ON dp.user_id = u.id 
                                       WHERE dp.id = ? AND dp.status = 'pending'", [$paymentId], $db);
@@ -31,12 +32,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     throw new Exception('Payment not found or already processed');
                 }
                 
-                dbQuery("UPDATE deposit_payments SET status = 'completed', verified_by = 'admin', verified_at = NOW(), completed_at = NOW() WHERE id = ?", 
-                       [$paymentId], $db);
+                $customerEmail = $payment['email'];
+                $amountUSD = (float)$payment['amount_usd'];
+                
+                error_log("Processing payment approval: Payment ID #{$paymentId}, Customer: {$customerEmail}, Amount: \${$amountUSD}");
+                
+                $walletResult = creditCustomerWallet(
+                    $customerEmail,
+                    $amountUSD,
+                    "Deposit approval - Payment #{$paymentId}"
+                );
+                
+                if (!$walletResult['success']) {
+                    error_log("StroWallet credit failed: " . ($walletResult['error'] ?? 'Unknown error'));
+                    throw new Exception('Failed to credit wallet: ' . ($walletResult['error'] ?? 'Unknown error'));
+                }
+                
+                error_log("StroWallet credit successful for {$customerEmail}: \${$amountUSD}");
+                
+                $strowalletData = isset($walletResult['data']) ? json_encode($walletResult['data']) : null;
+                
+                dbQuery("UPDATE deposit_payments 
+                        SET status = 'completed', 
+                            verified_by = 'admin', 
+                            verified_at = NOW(), 
+                            completed_at = NOW(),
+                            notes = CONCAT(COALESCE(notes, ''), '\n[StroWallet] Credited \$' || ? || ' to customer wallet. Response: ' || ?)
+                        WHERE id = ?", 
+                       [$amountUSD, $strowalletData, $paymentId], $db);
                 
                 dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, target_id, action_description, payload) 
-                        VALUES (?, 'approve_payment', 'deposit_payments', ?, 'Approved payment', ?)",
-                       [$adminId, $paymentId, json_encode(['amount_usd' => $payment['amount_usd'], 'user_id' => $payment['user_id']])], $db);
+                        VALUES (?, 'approve_payment', 'deposit_payments', ?, 'Approved payment and credited StroWallet', ?)",
+                       [$adminId, $paymentId, json_encode([
+                           'amount_usd' => $amountUSD, 
+                           'user_id' => $payment['user_id'],
+                           'customer_email' => $customerEmail,
+                           'strowallet_response' => $walletResult['data'] ?? null
+                       ])], $db);
                 
                 $db->commit();
                 
