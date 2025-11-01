@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                             verified_by = 'admin', 
                             verified_at = NOW(), 
                             completed_at = NOW(),
-                            notes = CONCAT(COALESCE(notes, ''), '\n[StroWallet] Credited \$' || ? || ' to customer wallet. Response: ' || ?)
+                            notes = COALESCE(notes, '') || E'\n[StroWallet] Credited $' || ? || ' to customer wallet. Response: ' || COALESCE(?, 'N/A')
                         WHERE id = ?", 
                        [$amountUSD, $strowalletData, $paymentId], $db);
                 

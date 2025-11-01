@@ -61,16 +61,27 @@ function callStroWalletAPI_Admin($endpoint, $method = 'GET', $data = []) {
 }
 
 function creditCustomerWallet($customerEmail, $amount, $description = 'Deposit') {
+    $publicKey = $_ENV['STROWALLET_PUBLIC_KEY'] ?? getenv('STROWALLET_PUBLIC_KEY') ?: '';
+    
+    if (empty($publicKey)) {
+        error_log("StroWallet public key not configured");
+        return ['success' => false, 'error' => 'Public key not configured'];
+    }
+    
     $data = [
         'customer_email' => $customerEmail,
         'amount' => (float)$amount,
         'description' => $description,
-        'currency' => 'USD'
+        'currency' => 'USD',
+        'public_key' => $publicKey
     ];
     
-    error_log("Crediting wallet for $customerEmail: $" . $amount . " (Sandbox mode)");
+    error_log("Crediting wallet for $customerEmail: $" . $amount . " USD (Sandbox mode) - Description: $description");
+    error_log("Request data: " . json_encode($data));
     
     $result = callStroWalletAPI_Admin('/bitvcard/fund-card/', 'POST', $data);
+    
+    error_log("StroWallet API Response: " . json_encode($result));
     
     if (isset($result['error'])) {
         error_log("Wallet credit failed: " . json_encode($result));
