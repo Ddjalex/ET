@@ -1104,18 +1104,43 @@ function handleCreateCard($chatId, $userId) {
     }
     
     // User has sufficient balance - proceed with card creation via StroWallet API
-    $result = callStroWalletAPI('/bitvcard/create-card', 'POST', [
-        'card_type' => 'virtual',
-        'amount' => $walletBalance
-    ], true);
+    // Prepare card holder's name
+    $nameOnCard = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
+    if (empty($nameOnCard)) {
+        $nameOnCard = 'Card Holder';
+    }
+    
+    // Prepare API parameters according to StroWallet documentation
+    $cardParams = [
+        'name_on_card' => $nameOnCard,
+        'card_type' => 'visa',
+        'public_key' => STROW_PUBLIC_KEY,
+        'amount' => (string)$walletBalance,
+        'customerEmail' => STROWALLET_EMAIL
+    ];
+    
+    // Add sandbox mode if enabled
+    if (USE_SANDBOX_MODE) {
+        $cardParams['mode'] = 'sandbox';
+    }
+    
+    $result = callStroWalletAPI('/bitvcard/create-card', 'POST', $cardParams, true);
     
     if (isset($result['error'])) {
         sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
         return;
     }
     
+    // Extract card details from response
+    $cardId = $result['response']['card_id'] ?? $result['card_id'] ?? null;
+    $cardStatus = $result['response']['card_status'] ?? $result['status'] ?? 'created';
+    
     $msg = "✅ <b>Card Created Successfully!</b>\n\n";
-    $msg .= "💳 Your virtual card has been created and funded with $" . number_format($walletBalance, 2) . "\n\n";
+    $msg .= "💳 Your virtual Visa card has been created and funded with $" . number_format($walletBalance, 2) . "\n";
+    if ($cardId) {
+        $msg .= "🆔 <b>Card ID:</b> <code>{$cardId}</code>\n";
+    }
+    $msg .= "📊 <b>Status:</b> " . ucfirst($cardStatus) . "\n\n";
     $msg .= "Use /cards to view your card details.";
     
     sendMessage($chatId, $msg, true, $userId);
