@@ -1079,7 +1079,9 @@ function handleCreateCard($chatId, $userId) {
     
     // Get user from database to check wallet
     $db = getDBConnection();
-    $user = dbFetchOne("SELECT * FROM users WHERE telegram_id = ?", [$userId], $db);
+    $stmt = $db->prepare("SELECT * FROM users WHERE telegram_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$user) {
         sendMessage($chatId, "❌ User not found. Please register first using /register", false);
@@ -1087,7 +1089,9 @@ function handleCreateCard($chatId, $userId) {
     }
     
     // Check wallet balance
-    $wallet = dbFetchOne("SELECT * FROM wallets WHERE user_id = ?", [$user['id']], $db);
+    $stmt = $db->prepare("SELECT * FROM wallets WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $wallet = $stmt->fetch(PDO::FETCH_ASSOC);
     $walletBalance = $wallet ? (float)$wallet['balance_usd'] : 0.00;
     
     // Minimum card creation amount (e.g., $5)
@@ -1223,7 +1227,9 @@ function handleWallet($chatId, $userId) {
     
     // Get user from database
     $db = getDBConnection();
-    $user = dbFetchOne("SELECT * FROM users WHERE telegram_id = ?", [$userId], $db);
+    $stmt = $db->prepare("SELECT * FROM users WHERE telegram_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$user) {
         sendMessage($chatId, "❌ User not found. Please register first using /register", false);
@@ -1231,7 +1237,9 @@ function handleWallet($chatId, $userId) {
     }
     
     // Get wallet balance from local database
-    $wallet = dbFetchOne("SELECT * FROM wallets WHERE user_id = ?", [$user['id']], $db);
+    $stmt = $db->prepare("SELECT * FROM wallets WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $wallet = $stmt->fetch(PDO::FETCH_ASSOC);
     
     $balanceUSD = $wallet ? (float)$wallet['balance_usd'] : 0.00;
     $balanceETB = $wallet ? (float)$wallet['balance_etb'] : 0.00;
