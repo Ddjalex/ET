@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
             $db->beginTransaction();
             
             if ($action === 'approve') {
-                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name, u.email, u.strowallet_user_id 
+                $payment = dbFetchOne("SELECT dp.*, u.telegram_id, u.first_name, u.last_name, u.email, u.strow_customer_id 
                                       FROM deposit_payments dp 
                                       JOIN users u ON dp.user_id = u.id 
                                       WHERE dp.id = ? AND dp.status = 'pending'", [$paymentId], $db);
