@@ -56,3 +56,54 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
 - **Databases:**
     - **PostgreSQL:** Used for admin panel, tracking, and temporary registration staging (14 tables: `admin_users`, `admin_actions`, `settings`, `deposits`, `deposit_payments`, `wallets`, `wallet_transactions`, `cards`, `card_transactions`, `users`, `user_registrations`, `broadcasts`, `broadcast_logs`, `giveaway_entries`).
     - **StroWallet Database:** Primary storage for all sensitive customer data, KYC documents, cards, and financial data.
+
+## Data Persistence & Backup
+
+### ✅ Customer Data Protection
+All customer data is preserved in `schema.sql` which contains:
+- Complete database structure (all 14 tables)
+- All customer records (users, deposits, cards, etc.)
+- All configuration and settings
+- Complete transaction history
+
+### 📦 Backup System
+**File:** `schema.sql` (auto-generated, contains complete database backup)
+
+**Backup Script:** `scripts/backup_database.sh`
+```bash
+bash scripts/backup_database.sh
+```
+This exports all database tables and customer data to `schema.sql` file.
+
+**Restore Script:** `scripts/restore_database.sh`
+```bash
+bash scripts/restore_database.sh
+```
+This restores the complete database from `schema.sql` file (⚠️ WARNING: Deletes existing data).
+
+### 🔄 Data Persistence Across Account Logins
+The `schema.sql` file ensures your customer data persists across different Replit account logins:
+
+1. **Before logging out or switching accounts:**
+   ```bash
+   bash scripts/backup_database.sh
+   ```
+   This saves all current data to `schema.sql`
+
+2. **After logging in with a different account:**
+   ```bash
+   bash scripts/restore_database.sh
+   ```
+   This restores all customer data from `schema.sql`
+
+3. **Regular backups (recommended):**
+   - Run backup script weekly or after important transactions
+   - Download `schema.sql` file to local machine for extra safety
+   - Keep multiple timestamped backups for disaster recovery
+
+### 🛡️ Important Notes
+- `schema.sql` is version controlled in Git (always committed)
+- Contains sensitive customer data - never share publicly
+- Replit PostgreSQL database is persistent within the same account
+- Use backup/restore scripts when migrating between accounts or Repls
+- All data is preserved: users, KYC status, deposits, cards, transactions
