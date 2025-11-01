@@ -75,12 +75,6 @@ $currentPage = basename($_SERVER['PHP_SELF'], '.php');
                 </a>
             </li>
             <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
-                <a href="/admin/deposits.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'deposits' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'deposits' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'deposits' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
-                    <span style="font-size: 1.25rem;">💰</span>
-                    <span>Deposits</span>
-                </a>
-            </li>
-            <li style="margin-bottom: 0.75rem; padding: 0 1rem;">
                 <a href="/admin/payments.php" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1rem; color: #ffffff; text-decoration: none; background: <?php echo $currentPage === 'payments' ? 'linear-gradient(135deg, rgba(201, 179, 130, 0.25), rgba(168, 153, 104, 0.25))' : 'rgba(201, 179, 130, 0.1)'; ?>; border: 1px solid <?php echo $currentPage === 'payments' ? 'rgba(201, 179, 130, 0.5)' : 'rgba(201, 179, 130, 0.2)'; ?>; border-radius: 12px; font-weight: 600; transition: all 0.3s; box-shadow: <?php echo $currentPage === 'payments' ? '0 4px 12px rgba(201, 179, 130, 0.3)' : 'none'; ?>;">
                     <span style="font-size: 1.25rem;">💳</span>
                     <span>Payment Verification</span>
