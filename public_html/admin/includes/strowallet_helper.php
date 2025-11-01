@@ -69,32 +69,32 @@ function creditCustomerWallet($customerEmail, $amount, $description = 'Deposit')
     }
     
     $data = [
-        'customer_email' => $customerEmail,
         'amount' => (float)$amount,
-        'description' => $description,
         'currency' => 'USD',
+        'receiver' => $customerEmail,
+        'note' => $description,
         'public_key' => $publicKey
     ];
     
-    error_log("Crediting wallet for $customerEmail: $" . $amount . " USD (Sandbox mode) - Description: $description");
+    error_log("Transferring funds to $customerEmail: $" . $amount . " USD (Sandbox mode) - Note: $description");
     error_log("Request data: " . json_encode($data));
     
-    $result = callStroWalletAPI_Admin('/bitvcard/fund-card/', 'POST', $data);
+    $result = callStroWalletAPI_Admin('/wallet/transfer', 'POST', $data);
     
     error_log("StroWallet API Response: " . json_encode($result));
     
     if (isset($result['error'])) {
-        error_log("Wallet credit failed: " . json_encode($result));
+        error_log("Wallet transfer failed: " . json_encode($result));
         return ['success' => false, 'error' => $result['error']];
     }
     
     if (isset($result['status']) && $result['status'] === 'success') {
-        error_log("Wallet credited successfully for $customerEmail");
+        error_log("Wallet transfer successful to $customerEmail");
         return ['success' => true, 'data' => $result];
     }
     
     if (isset($result['success']) && $result['success'] === true) {
-        error_log("Wallet credited successfully for $customerEmail");
+        error_log("Wallet transfer successful to $customerEmail");
         return ['success' => true, 'data' => $result];
     }
     
