@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 16.9
+-- Dumped from database version 16.9 (165f042)
 -- Dumped by pg_dump version 16.9
 
 SET statement_timeout = 0;
@@ -148,7 +148,7 @@ DROP TABLE IF EXISTS public.admin_actions;
 DROP FUNCTION IF EXISTS public.update_updated_at_column();
 DROP FUNCTION IF EXISTS public.update_deposit_payments_updated_at();
 --
--- Name: update_deposit_payments_updated_at(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_deposit_payments_updated_at(); Type: FUNCTION; Schema: public; Owner: neondb_owner
 --
 
 CREATE FUNCTION public.update_deposit_payments_updated_at() RETURNS trigger
@@ -161,10 +161,10 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_deposit_payments_updated_at() OWNER TO postgres;
+ALTER FUNCTION public.update_deposit_payments_updated_at() OWNER TO neondb_owner;
 
 --
--- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: postgres
+-- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: neondb_owner
 --
 
 CREATE FUNCTION public.update_updated_at_column() RETURNS trigger
@@ -177,14 +177,14 @@ END;
 $$;
 
 
-ALTER FUNCTION public.update_updated_at_column() OWNER TO postgres;
+ALTER FUNCTION public.update_updated_at_column() OWNER TO neondb_owner;
 
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: admin_actions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: admin_actions; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.admin_actions (
@@ -201,10 +201,10 @@ CREATE TABLE public.admin_actions (
 );
 
 
-ALTER TABLE public.admin_actions OWNER TO postgres;
+ALTER TABLE public.admin_actions OWNER TO neondb_owner;
 
 --
--- Name: admin_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: admin_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.admin_actions_id_seq
@@ -216,17 +216,17 @@ CREATE SEQUENCE public.admin_actions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.admin_actions_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.admin_actions_id_seq OWNER TO neondb_owner;
 
 --
--- Name: admin_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: admin_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.admin_actions_id_seq OWNED BY public.admin_actions.id;
 
 
 --
--- Name: admin_users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: admin_users; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.admin_users (
@@ -241,15 +241,15 @@ CREATE TABLE public.admin_users (
     last_login_ip character varying(45),
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT admin_users_role_check CHECK (((role)::text = ANY ((ARRAY['super_admin'::character varying, 'admin'::character varying, 'viewer'::character varying])::text[]))),
-    CONSTRAINT admin_users_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'suspended'::character varying, 'deactivated'::character varying])::text[])))
+    CONSTRAINT admin_users_role_check CHECK (((role)::text = ANY (ARRAY[('super_admin'::character varying)::text, ('admin'::character varying)::text, ('viewer'::character varying)::text]))),
+    CONSTRAINT admin_users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('suspended'::character varying)::text, ('deactivated'::character varying)::text])))
 );
 
 
-ALTER TABLE public.admin_users OWNER TO postgres;
+ALTER TABLE public.admin_users OWNER TO neondb_owner;
 
 --
--- Name: admin_users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: admin_users_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.admin_users_id_seq
@@ -261,17 +261,17 @@ CREATE SEQUENCE public.admin_users_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.admin_users_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.admin_users_id_seq OWNER TO neondb_owner;
 
 --
--- Name: admin_users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: admin_users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.admin_users_id_seq OWNED BY public.admin_users.id;
 
 
 --
--- Name: broadcast_logs; Type: TABLE; Schema: public; Owner: postgres
+-- Name: broadcast_logs; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.broadcast_logs (
@@ -286,10 +286,10 @@ CREATE TABLE public.broadcast_logs (
 );
 
 
-ALTER TABLE public.broadcast_logs OWNER TO postgres;
+ALTER TABLE public.broadcast_logs OWNER TO neondb_owner;
 
 --
--- Name: broadcast_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: broadcast_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.broadcast_logs_id_seq
@@ -301,17 +301,17 @@ CREATE SEQUENCE public.broadcast_logs_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.broadcast_logs_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.broadcast_logs_id_seq OWNER TO neondb_owner;
 
 --
--- Name: broadcast_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: broadcast_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.broadcast_logs_id_seq OWNED BY public.broadcast_logs.id;
 
 
 --
--- Name: broadcasts; Type: TABLE; Schema: public; Owner: postgres
+-- Name: broadcasts; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.broadcasts (
@@ -342,16 +342,16 @@ CREATE TABLE public.broadcasts (
     created_by integer,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT broadcasts_content_type_check CHECK (((content_type)::text = ANY ((ARRAY['text'::character varying, 'photo'::character varying, 'video'::character varying, 'poll'::character varying])::text[]))),
-    CONSTRAINT broadcasts_poll_type_check CHECK (((poll_type)::text = ANY ((ARRAY['regular'::character varying, 'quiz'::character varying])::text[]))),
-    CONSTRAINT broadcasts_status_check CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'scheduled'::character varying, 'sent'::character varying, 'failed'::character varying])::text[])))
+    CONSTRAINT broadcasts_content_type_check CHECK (((content_type)::text = ANY (ARRAY[('text'::character varying)::text, ('photo'::character varying)::text, ('video'::character varying)::text, ('poll'::character varying)::text]))),
+    CONSTRAINT broadcasts_poll_type_check CHECK (((poll_type)::text = ANY (ARRAY[('regular'::character varying)::text, ('quiz'::character varying)::text]))),
+    CONSTRAINT broadcasts_status_check CHECK (((status)::text = ANY (ARRAY[('draft'::character varying)::text, ('scheduled'::character varying)::text, ('sent'::character varying)::text, ('failed'::character varying)::text])))
 );
 
 
-ALTER TABLE public.broadcasts OWNER TO postgres;
+ALTER TABLE public.broadcasts OWNER TO neondb_owner;
 
 --
--- Name: broadcasts_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: broadcasts_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.broadcasts_id_seq
@@ -363,17 +363,17 @@ CREATE SEQUENCE public.broadcasts_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.broadcasts_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.broadcasts_id_seq OWNER TO neondb_owner;
 
 --
--- Name: broadcasts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: broadcasts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.broadcasts_id_seq OWNED BY public.broadcasts.id;
 
 
 --
--- Name: card_transactions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: card_transactions; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.card_transactions (
@@ -391,15 +391,15 @@ CREATE TABLE public.card_transactions (
     metadata jsonb,
     transaction_date timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT card_transactions_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'completed'::character varying, 'declined'::character varying, 'reversed'::character varying])::text[]))),
-    CONSTRAINT card_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY ((ARRAY['topup'::character varying, 'topup_fee'::character varying, 'purchase'::character varying, 'refund'::character varying, 'fee'::character varying, 'reversal'::character varying])::text[])))
+    CONSTRAINT card_transactions_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('completed'::character varying)::text, ('declined'::character varying)::text, ('reversed'::character varying)::text]))),
+    CONSTRAINT card_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY (ARRAY[('topup'::character varying)::text, ('topup_fee'::character varying)::text, ('purchase'::character varying)::text, ('refund'::character varying)::text, ('fee'::character varying)::text, ('reversal'::character varying)::text])))
 );
 
 
-ALTER TABLE public.card_transactions OWNER TO postgres;
+ALTER TABLE public.card_transactions OWNER TO neondb_owner;
 
 --
--- Name: card_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: card_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.card_transactions_id_seq
@@ -411,17 +411,17 @@ CREATE SEQUENCE public.card_transactions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.card_transactions_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.card_transactions_id_seq OWNER TO neondb_owner;
 
 --
--- Name: card_transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: card_transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.card_transactions_id_seq OWNED BY public.card_transactions.id;
 
 
 --
--- Name: cards; Type: TABLE; Schema: public; Owner: postgres
+-- Name: cards; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.cards (
@@ -442,14 +442,14 @@ CREATE TABLE public.cards (
     creation_wallet_transaction_id integer,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT cards_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'frozen'::character varying, 'closed'::character varying, 'expired'::character varying])::text[])))
+    CONSTRAINT cards_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('frozen'::character varying)::text, ('closed'::character varying)::text, ('expired'::character varying)::text])))
 );
 
 
-ALTER TABLE public.cards OWNER TO postgres;
+ALTER TABLE public.cards OWNER TO neondb_owner;
 
 --
--- Name: cards_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: cards_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.cards_id_seq
@@ -461,17 +461,17 @@ CREATE SEQUENCE public.cards_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.cards_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.cards_id_seq OWNER TO neondb_owner;
 
 --
--- Name: cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: cards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.cards_id_seq OWNED BY public.cards.id;
 
 
 --
--- Name: deposit_payments; Type: TABLE; Schema: public; Owner: postgres
+-- Name: deposit_payments; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.deposit_payments (
@@ -501,16 +501,16 @@ CREATE TABLE public.deposit_payments (
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     completed_at timestamp without time zone,
-    CONSTRAINT deposit_payments_payment_method_check CHECK (((payment_method)::text = ANY ((ARRAY['telebirr'::character varying, 'm-pesa'::character varying, 'cbe'::character varying, 'bank_transfer'::character varying])::text[]))),
-    CONSTRAINT deposit_payments_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'screenshot_submitted'::character varying, 'transaction_submitted'::character varying, 'verified'::character varying, 'processing'::character varying, 'completed'::character varying, 'rejected'::character varying, 'cancelled'::character varying])::text[]))),
-    CONSTRAINT deposit_payments_validation_status_check CHECK (((validation_status)::text = ANY ((ARRAY['pending'::character varying, 'validating'::character varying, 'verified'::character varying, 'rejected'::character varying, 'manual_approved'::character varying])::text[])))
+    CONSTRAINT deposit_payments_payment_method_check CHECK (((payment_method)::text = ANY (ARRAY[('telebirr'::character varying)::text, ('m-pesa'::character varying)::text, ('cbe'::character varying)::text, ('bank_transfer'::character varying)::text]))),
+    CONSTRAINT deposit_payments_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('screenshot_submitted'::character varying)::text, ('transaction_submitted'::character varying)::text, ('verified'::character varying)::text, ('processing'::character varying)::text, ('completed'::character varying)::text, ('rejected'::character varying)::text, ('cancelled'::character varying)::text]))),
+    CONSTRAINT deposit_payments_validation_status_check CHECK (((validation_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('validating'::character varying)::text, ('verified'::character varying)::text, ('rejected'::character varying)::text, ('manual_approved'::character varying)::text])))
 );
 
 
-ALTER TABLE public.deposit_payments OWNER TO postgres;
+ALTER TABLE public.deposit_payments OWNER TO neondb_owner;
 
 --
--- Name: deposit_payments_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: deposit_payments_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.deposit_payments_id_seq
@@ -522,17 +522,17 @@ CREATE SEQUENCE public.deposit_payments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.deposit_payments_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.deposit_payments_id_seq OWNER TO neondb_owner;
 
 --
--- Name: deposit_payments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: deposit_payments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.deposit_payments_id_seq OWNED BY public.deposit_payments.id;
 
 
 --
--- Name: deposits; Type: TABLE; Schema: public; Owner: postgres
+-- Name: deposits; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.deposits (
@@ -559,14 +559,14 @@ CREATE TABLE public.deposits (
     expires_at timestamp without time zone,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT deposits_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'payment_submitted'::character varying, 'approved'::character varying, 'rejected'::character varying, 'expired'::character varying])::text[])))
+    CONSTRAINT deposits_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('payment_submitted'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text, ('expired'::character varying)::text])))
 );
 
 
-ALTER TABLE public.deposits OWNER TO postgres;
+ALTER TABLE public.deposits OWNER TO neondb_owner;
 
 --
--- Name: deposits_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: deposits_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.deposits_id_seq
@@ -578,17 +578,17 @@ CREATE SEQUENCE public.deposits_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.deposits_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.deposits_id_seq OWNER TO neondb_owner;
 
 --
--- Name: deposits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: deposits_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.deposits_id_seq OWNED BY public.deposits.id;
 
 
 --
--- Name: giveaway_entries; Type: TABLE; Schema: public; Owner: postgres
+-- Name: giveaway_entries; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.giveaway_entries (
@@ -602,10 +602,10 @@ CREATE TABLE public.giveaway_entries (
 );
 
 
-ALTER TABLE public.giveaway_entries OWNER TO postgres;
+ALTER TABLE public.giveaway_entries OWNER TO neondb_owner;
 
 --
--- Name: giveaway_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: giveaway_entries_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.giveaway_entries_id_seq
@@ -617,17 +617,17 @@ CREATE SEQUENCE public.giveaway_entries_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.giveaway_entries_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.giveaway_entries_id_seq OWNER TO neondb_owner;
 
 --
--- Name: giveaway_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: giveaway_entries_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.giveaway_entries_id_seq OWNED BY public.giveaway_entries.id;
 
 
 --
--- Name: settings; Type: TABLE; Schema: public; Owner: postgres
+-- Name: settings; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.settings (
@@ -639,10 +639,10 @@ CREATE TABLE public.settings (
 );
 
 
-ALTER TABLE public.settings OWNER TO postgres;
+ALTER TABLE public.settings OWNER TO neondb_owner;
 
 --
--- Name: user_registrations; Type: TABLE; Schema: public; Owner: postgres
+-- Name: user_registrations; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.user_registrations (
@@ -674,24 +674,24 @@ CREATE TABLE public.user_registrations (
 );
 
 
-ALTER TABLE public.user_registrations OWNER TO postgres;
+ALTER TABLE public.user_registrations OWNER TO neondb_owner;
 
 --
--- Name: COLUMN user_registrations.kyc_status; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN user_registrations.kyc_status; Type: COMMENT; Schema: public; Owner: neondb_owner
 --
 
 COMMENT ON COLUMN public.user_registrations.kyc_status IS 'KYC verification status: pending, approved, rejected';
 
 
 --
--- Name: COLUMN user_registrations.strowallet_customer_id; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN user_registrations.strowallet_customer_id; Type: COMMENT; Schema: public; Owner: neondb_owner
 --
 
 COMMENT ON COLUMN public.user_registrations.strowallet_customer_id IS 'Customer ID from StroWallet API';
 
 
 --
--- Name: user_registrations_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: user_registrations_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.user_registrations_id_seq
@@ -703,17 +703,17 @@ CREATE SEQUENCE public.user_registrations_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.user_registrations_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.user_registrations_id_seq OWNER TO neondb_owner;
 
 --
--- Name: user_registrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: user_registrations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.user_registrations_id_seq OWNED BY public.user_registrations.id;
 
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: users; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.users (
@@ -743,22 +743,22 @@ CREATE TABLE public.users (
     status character varying(20) DEFAULT 'active'::character varying,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT users_kyc_status_check CHECK (((kyc_status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying])::text[]))),
-    CONSTRAINT users_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'suspended'::character varying, 'banned'::character varying])::text[])))
+    CONSTRAINT users_kyc_status_check CHECK (((kyc_status)::text = ANY (ARRAY[('pending'::character varying)::text, ('approved'::character varying)::text, ('rejected'::character varying)::text]))),
+    CONSTRAINT users_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('suspended'::character varying)::text, ('banned'::character varying)::text])))
 );
 
 
-ALTER TABLE public.users OWNER TO postgres;
+ALTER TABLE public.users OWNER TO neondb_owner;
 
 --
--- Name: COLUMN users.telegram_id; Type: COMMENT; Schema: public; Owner: postgres
+-- Name: COLUMN users.telegram_id; Type: COMMENT; Schema: public; Owner: neondb_owner
 --
 
 COMMENT ON COLUMN public.users.telegram_id IS 'Telegram user ID (NULL for StroWallet-only customers)';
 
 
 --
--- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.users_id_seq
@@ -770,17 +770,17 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.users_id_seq OWNER TO neondb_owner;
 
 --
--- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: wallet_transactions; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.wallet_transactions (
@@ -798,15 +798,15 @@ CREATE TABLE public.wallet_transactions (
     metadata jsonb,
     created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT wallet_transactions_status_check CHECK (((status)::text = ANY ((ARRAY['pending'::character varying, 'completed'::character varying, 'failed'::character varying, 'reversed'::character varying])::text[]))),
-    CONSTRAINT wallet_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY ((ARRAY['deposit'::character varying, 'topup'::character varying, 'card_creation_fee'::character varying, 'card_topup_fee'::character varying, 'refund'::character varying, 'admin_adjustment'::character varying])::text[])))
+    CONSTRAINT wallet_transactions_status_check CHECK (((status)::text = ANY (ARRAY[('pending'::character varying)::text, ('completed'::character varying)::text, ('failed'::character varying)::text, ('reversed'::character varying)::text]))),
+    CONSTRAINT wallet_transactions_transaction_type_check CHECK (((transaction_type)::text = ANY (ARRAY[('deposit'::character varying)::text, ('topup'::character varying)::text, ('card_creation_fee'::character varying)::text, ('card_topup_fee'::character varying)::text, ('refund'::character varying)::text, ('admin_adjustment'::character varying)::text])))
 );
 
 
-ALTER TABLE public.wallet_transactions OWNER TO postgres;
+ALTER TABLE public.wallet_transactions OWNER TO neondb_owner;
 
 --
--- Name: wallet_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: wallet_transactions_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.wallet_transactions_id_seq
@@ -818,17 +818,17 @@ CREATE SEQUENCE public.wallet_transactions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.wallet_transactions_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.wallet_transactions_id_seq OWNER TO neondb_owner;
 
 --
--- Name: wallet_transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: wallet_transactions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.wallet_transactions_id_seq OWNED BY public.wallet_transactions.id;
 
 
 --
--- Name: wallets; Type: TABLE; Schema: public; Owner: postgres
+-- Name: wallets; Type: TABLE; Schema: public; Owner: neondb_owner
 --
 
 CREATE TABLE public.wallets (
@@ -841,14 +841,14 @@ CREATE TABLE public.wallets (
     updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT wallets_balance_etb_check CHECK ((balance_etb >= (0)::numeric)),
     CONSTRAINT wallets_balance_usd_check CHECK ((balance_usd >= (0)::numeric)),
-    CONSTRAINT wallets_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'frozen'::character varying, 'closed'::character varying])::text[])))
+    CONSTRAINT wallets_status_check CHECK (((status)::text = ANY (ARRAY[('active'::character varying)::text, ('frozen'::character varying)::text, ('closed'::character varying)::text])))
 );
 
 
-ALTER TABLE public.wallets OWNER TO postgres;
+ALTER TABLE public.wallets OWNER TO neondb_owner;
 
 --
--- Name: wallets_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: wallets_id_seq; Type: SEQUENCE; Schema: public; Owner: neondb_owner
 --
 
 CREATE SEQUENCE public.wallets_id_seq
@@ -860,292 +860,305 @@ CREATE SEQUENCE public.wallets_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.wallets_id_seq OWNER TO postgres;
+ALTER SEQUENCE public.wallets_id_seq OWNER TO neondb_owner;
 
 --
--- Name: wallets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: wallets_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: neondb_owner
 --
 
 ALTER SEQUENCE public.wallets_id_seq OWNED BY public.wallets.id;
 
 
 --
--- Name: admin_actions id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: admin_actions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_actions ALTER COLUMN id SET DEFAULT nextval('public.admin_actions_id_seq'::regclass);
 
 
 --
--- Name: admin_users id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: admin_users id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_users ALTER COLUMN id SET DEFAULT nextval('public.admin_users_id_seq'::regclass);
 
 
 --
--- Name: broadcast_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: broadcast_logs id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcast_logs ALTER COLUMN id SET DEFAULT nextval('public.broadcast_logs_id_seq'::regclass);
 
 
 --
--- Name: broadcasts id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: broadcasts id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcasts ALTER COLUMN id SET DEFAULT nextval('public.broadcasts_id_seq'::regclass);
 
 
 --
--- Name: card_transactions id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: card_transactions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.card_transactions ALTER COLUMN id SET DEFAULT nextval('public.card_transactions_id_seq'::regclass);
 
 
 --
--- Name: cards id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: cards id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards ALTER COLUMN id SET DEFAULT nextval('public.cards_id_seq'::regclass);
 
 
 --
--- Name: deposit_payments id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: deposit_payments id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposit_payments ALTER COLUMN id SET DEFAULT nextval('public.deposit_payments_id_seq'::regclass);
 
 
 --
--- Name: deposits id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: deposits id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits ALTER COLUMN id SET DEFAULT nextval('public.deposits_id_seq'::regclass);
 
 
 --
--- Name: giveaway_entries id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: giveaway_entries id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.giveaway_entries ALTER COLUMN id SET DEFAULT nextval('public.giveaway_entries_id_seq'::regclass);
 
 
 --
--- Name: user_registrations id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: user_registrations id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.user_registrations ALTER COLUMN id SET DEFAULT nextval('public.user_registrations_id_seq'::regclass);
 
 
 --
--- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
 
 
 --
--- Name: wallet_transactions id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: wallet_transactions id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallet_transactions ALTER COLUMN id SET DEFAULT nextval('public.wallet_transactions_id_seq'::regclass);
 
 
 --
--- Name: wallets id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: wallets id; Type: DEFAULT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallets ALTER COLUMN id SET DEFAULT nextval('public.wallets_id_seq'::regclass);
 
 
 --
--- Data for Name: admin_actions; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: admin_actions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+INSERT INTO public.admin_actions VALUES (1, 1, 'update_settings', 'settings', NULL, 'Updated exchange rate', '{"key": "exchange_rate_usd_to_etb", "rate": 172}', NULL, NULL, '2025-11-01 08:08:33.49978');
+INSERT INTO public.admin_actions VALUES (2, 1, 'update_settings', 'settings', NULL, 'Updated deposit fee', '{"flat": 430, "percentage": 0}', NULL, NULL, '2025-11-01 08:08:49.136994');
+INSERT INTO public.admin_actions VALUES (3, 1, 'add_setting', 'settings', NULL, 'Added deposit account', '{"method": "TeleBirr", "account_name": "almeseged wondimu"}', NULL, NULL, '2025-11-01 08:08:58.920971');
+INSERT INTO public.admin_actions VALUES (4, 1, 'add_setting', 'settings', NULL, 'Added deposit account', '{"method": "CBE Birr", "account_name": "almeseged wondimu"}', NULL, NULL, '2025-11-01 08:09:10.123425');
+INSERT INTO public.admin_actions VALUES (5, 1, 'add_setting', 'settings', NULL, 'Added deposit account', '{"method": "M-PESA", "account_name": "almeseged wondimu"}', NULL, NULL, '2025-11-01 08:09:23.332303');
+INSERT INTO public.admin_actions VALUES (6, 1, 'add_setting', 'settings', NULL, 'Added deposit account', '{"method": "Bank Transfer", "account_name": "almeseged wondimu"}', NULL, NULL, '2025-11-01 08:09:36.562819');
+
+
+--
+-- Data for Name: admin_users; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+INSERT INTO public.admin_users VALUES (1, 'admin', 'admin@cardbot.local', '$2y$10$44B3Z2K3NJ9jU7pm7jp0ee3QX89F3yPD1r2wwPASeGAQPfmNFXRwG', 'System Administrator', 'super_admin', 'active', '2025-11-01 08:08:18.252739', '172.31.83.66', '2025-10-30 06:34:08.794698', '2025-11-01 08:08:18.252739');
+
+
+--
+-- Data for Name: broadcast_logs; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: admin_users; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-INSERT INTO public.admin_users VALUES (1, 'admin', 'admin@cardbot.local', '$2y$10$44B3Z2K3NJ9jU7pm7jp0ee3QX89F3yPD1r2wwPASeGAQPfmNFXRwG', 'System Administrator', 'super_admin', 'active', '2025-10-30 06:41:14.009067', '172.31.91.34', '2025-10-30 06:34:08.794698', '2025-10-30 06:41:14.009067');
-
-
---
--- Data for Name: broadcast_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: broadcasts; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: broadcasts; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: card_transactions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: card_transactions; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: cards; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: cards; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: deposit_payments; Type: TABLE DATA; Schema: public; Owner: neondb_owner
+--
+
+INSERT INTO public.deposit_payments VALUES (1, 1, 383870190, 40.00, 5220.00, 130.5000, 0.00, 5220.00, 'telebirr', NULL, NULL, NULL, NULL, NULL, 'pending', NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-01 08:07:35.382678', '2025-11-01 08:07:35.382678', NULL);
+INSERT INTO public.deposit_payments VALUES (2, 1, 383870190, 30.00, 5160.00, 172.0000, 430.00, 5590.00, 'bank_transfer', NULL, NULL, NULL, NULL, NULL, 'pending', NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-01 08:10:35.190463', '2025-11-01 08:10:35.190463', NULL);
+INSERT INTO public.deposit_payments VALUES (3, 1, 383870190, 30.00, 5160.00, 172.0000, 430.00, 5590.00, 'bank_transfer', NULL, NULL, NULL, NULL, NULL, 'pending', NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-01 08:10:50.439065', '2025-11-01 08:10:50.439065', NULL);
+INSERT INTO public.deposit_payments VALUES (4, 1, 383870190, 30.00, 5160.00, 172.0000, 430.00, 5590.00, 'm-pesa', NULL, NULL, NULL, NULL, NULL, 'pending', NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-01 08:11:04.31673', '2025-11-01 08:11:04.31673', NULL);
+INSERT INTO public.deposit_payments VALUES (5, 1, 383870190, 30.00, 5160.00, 172.0000, 430.00, 5590.00, 'cbe', NULL, NULL, NULL, NULL, NULL, 'pending', NULL, 0, NULL, NULL, NULL, NULL, 'pending', NULL, '2025-11-01 08:11:20.233662', '2025-11-01 08:11:20.233662', NULL);
+
+
+--
+-- Data for Name: deposits; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: deposit_payments; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: giveaway_entries; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: deposits; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
-
-
---
--- Data for Name: giveaway_entries; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-
-
---
--- Data for Name: settings; Type: TABLE DATA; Schema: public; Owner: postgres
---
-
-INSERT INTO public.settings VALUES ('exchange_rate_usd_to_etb', '{"rate": 130.50, "last_updated": "2025-10-20"}', 'USD to ETB exchange rate', '2025-10-30 06:34:08.794698', NULL);
 INSERT INTO public.settings VALUES ('card_creation_fee', '{"flat": 1.99, "currency": "USD", "percentage": 1.99}', 'Card creation fee structure', '2025-10-30 06:34:08.794698', NULL);
 INSERT INTO public.settings VALUES ('card_topup_fee', '{"flat": 1.99, "currency": "USD", "percentage": 1.99}', 'Card top-up fee structure', '2025-10-30 06:34:08.794698', NULL);
-INSERT INTO public.settings VALUES ('deposit_fee', '{"flat": 0.00, "currency": "ETB", "percentage": 0.00}', 'Deposit fee structure', '2025-10-30 06:34:08.794698', NULL);
 INSERT INTO public.settings VALUES ('card_limits', '{"max_topup": 10000, "min_topup": 5, "daily_limit": 1000}', 'Card transaction limits', '2025-10-30 06:34:08.794698', NULL);
 INSERT INTO public.settings VALUES ('kyc_requirements', '{"require_photo": true, "require_address": true, "require_id_image": true}', 'KYC verification requirements', '2025-10-30 06:34:08.794698', NULL);
 INSERT INTO public.settings VALUES ('system_status', '{"allow_deposits": true, "maintenance_mode": false, "allow_card_creation": true}', 'System operational status', '2025-10-30 06:34:08.794698', NULL);
+INSERT INTO public.settings VALUES ('exchange_rate_usd_to_etb', '{"rate": 172, "last_updated": "2025-11-01 08:08:32"}', 'USD to ETB exchange rate', '2025-11-01 08:08:33.165412', 1);
+INSERT INTO public.settings VALUES ('deposit_fee', '{"flat": 430, "currency": "ETB", "percentage": 0}', 'Deposit fee structure', '2025-11-01 08:08:48.803724', 1);
+INSERT INTO public.settings VALUES ('deposit_accounts', '[{"id": "6905c01a17677", "method": "TeleBirr", "created_at": "2025-11-01 08:08:58", "account_name": "almeseged wondimu", "instructions": "", "account_number": "+251974408281"}, {"id": "6905c02547eaa", "method": "CBE Birr", "created_at": "2025-11-01 08:09:09", "account_name": "almeseged wondimu", "instructions": "", "account_number": "+251974408281"}, {"id": "6905c032783a1", "method": "M-PESA", "created_at": "2025-11-01 08:09:22", "account_name": "almeseged wondimu", "instructions": "", "account_number": "+251707892999"}, {"id": "6905c03fb1e99", "method": "Bank Transfer", "created_at": "2025-11-01 08:09:35", "account_name": "almeseged wondimu", "instructions": "", "account_number": "1000109358391"}]', NULL, '2025-11-01 08:09:36.228172', 1);
 
 
 --
--- Data for Name: user_registrations; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: user_registrations; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
+INSERT INTO public.user_registrations VALUES (1, 383870190, 'idle', false, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'ET', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-01 08:07:21.666423', '2025-11-01 08:14:44.965725', NULL, 'pending', NULL);
 
 
 --
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 INSERT INTO public.users VALUES (1, 383870190, 'amanuail071@gmail.com', '', 'Kalkidan', 'Semeneh', 'approved', NULL, '2025-10-30 06:39:06.584041', NULL, NULL, 'e0b1c7d8-3948-481a-9f9a-c78954482d2d', NULL, NULL, '/uploads/kyc_documents/383870190_id_image_1761633531_c58f5c7e6dda84f6.jpg', '/uploads/kyc_documents/383870190_user_photo_1761633556_3968603ed2337023.jpg', 'Gulale', NULL, NULL, NULL, 'ET', NULL, '2002-11-16', 'active', '2025-10-30 06:39:06.584041', '2025-10-30 06:39:23.819769');
 
 
 --
--- Data for Name: wallet_transactions; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: wallet_transactions; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Data for Name: wallets; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: wallets; Type: TABLE DATA; Schema: public; Owner: neondb_owner
 --
 
 
 
 --
--- Name: admin_actions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: admin_actions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.admin_actions_id_seq', 1, false);
+SELECT pg_catalog.setval('public.admin_actions_id_seq', 6, true);
 
 
 --
--- Name: admin_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: admin_users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.admin_users_id_seq', 1, true);
 
 
 --
--- Name: broadcast_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: broadcast_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.broadcast_logs_id_seq', 1, false);
 
 
 --
--- Name: broadcasts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: broadcasts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.broadcasts_id_seq', 1, false);
 
 
 --
--- Name: card_transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: card_transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.card_transactions_id_seq', 1, false);
 
 
 --
--- Name: cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: cards_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.cards_id_seq', 1, false);
 
 
 --
--- Name: deposit_payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: deposit_payments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.deposit_payments_id_seq', 1, false);
+SELECT pg_catalog.setval('public.deposit_payments_id_seq', 5, true);
 
 
 --
--- Name: deposits_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: deposits_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.deposits_id_seq', 1, false);
 
 
 --
--- Name: giveaway_entries_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: giveaway_entries_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.giveaway_entries_id_seq', 1, false);
 
 
 --
--- Name: user_registrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: user_registrations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
-SELECT pg_catalog.setval('public.user_registrations_id_seq', 1, false);
+SELECT pg_catalog.setval('public.user_registrations_id_seq', 1, true);
 
 
 --
--- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.users_id_seq', 1, true);
 
 
 --
--- Name: wallet_transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: wallet_transactions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.wallet_transactions_id_seq', 1, false);
 
 
 --
--- Name: wallets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: wallets_id_seq; Type: SEQUENCE SET; Schema: public; Owner: neondb_owner
 --
 
 SELECT pg_catalog.setval('public.wallets_id_seq', 1, false);
 
 
 --
--- Name: admin_actions admin_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admin_actions admin_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_actions
@@ -1153,7 +1166,7 @@ ALTER TABLE ONLY public.admin_actions
 
 
 --
--- Name: admin_users admin_users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admin_users admin_users_email_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_users
@@ -1161,7 +1174,7 @@ ALTER TABLE ONLY public.admin_users
 
 
 --
--- Name: admin_users admin_users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admin_users admin_users_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_users
@@ -1169,7 +1182,7 @@ ALTER TABLE ONLY public.admin_users
 
 
 --
--- Name: admin_users admin_users_username_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admin_users admin_users_username_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_users
@@ -1177,7 +1190,7 @@ ALTER TABLE ONLY public.admin_users
 
 
 --
--- Name: broadcast_logs broadcast_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: broadcast_logs broadcast_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcast_logs
@@ -1185,7 +1198,7 @@ ALTER TABLE ONLY public.broadcast_logs
 
 
 --
--- Name: broadcasts broadcasts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: broadcasts broadcasts_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcasts
@@ -1193,7 +1206,7 @@ ALTER TABLE ONLY public.broadcasts
 
 
 --
--- Name: card_transactions card_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: card_transactions card_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.card_transactions
@@ -1201,7 +1214,7 @@ ALTER TABLE ONLY public.card_transactions
 
 
 --
--- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards
@@ -1209,7 +1222,7 @@ ALTER TABLE ONLY public.cards
 
 
 --
--- Name: cards cards_strow_card_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cards cards_strow_card_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards
@@ -1217,7 +1230,7 @@ ALTER TABLE ONLY public.cards
 
 
 --
--- Name: deposit_payments deposit_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposit_payments deposit_payments_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposit_payments
@@ -1225,7 +1238,7 @@ ALTER TABLE ONLY public.deposit_payments
 
 
 --
--- Name: deposits deposits_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1233,7 +1246,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: giveaway_entries giveaway_entries_broadcast_id_telegram_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: giveaway_entries giveaway_entries_broadcast_id_telegram_user_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.giveaway_entries
@@ -1241,7 +1254,7 @@ ALTER TABLE ONLY public.giveaway_entries
 
 
 --
--- Name: giveaway_entries giveaway_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: giveaway_entries giveaway_entries_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.giveaway_entries
@@ -1249,7 +1262,7 @@ ALTER TABLE ONLY public.giveaway_entries
 
 
 --
--- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: settings settings_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.settings
@@ -1257,7 +1270,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- Name: user_registrations user_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_registrations user_registrations_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.user_registrations
@@ -1265,7 +1278,7 @@ ALTER TABLE ONLY public.user_registrations
 
 
 --
--- Name: user_registrations user_registrations_telegram_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: user_registrations user_registrations_telegram_user_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.user_registrations
@@ -1273,7 +1286,7 @@ ALTER TABLE ONLY public.user_registrations
 
 
 --
--- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_email_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.users
@@ -1281,7 +1294,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.users
@@ -1289,7 +1302,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: users users_telegram_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_telegram_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.users
@@ -1297,7 +1310,7 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: wallet_transactions wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallet_transactions wallet_transactions_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallet_transactions
@@ -1305,7 +1318,7 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
--- Name: wallets wallets_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallets wallets_pkey; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallets
@@ -1313,7 +1326,7 @@ ALTER TABLE ONLY public.wallets
 
 
 --
--- Name: wallets wallets_user_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallets wallets_user_id_key; Type: CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallets
@@ -1321,329 +1334,329 @@ ALTER TABLE ONLY public.wallets
 
 
 --
--- Name: idx_admin_actions_admin_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_admin_actions_admin_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_admin_actions_admin_id ON public.admin_actions USING btree (admin_id);
 
 
 --
--- Name: idx_admin_actions_created_at; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_admin_actions_created_at; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_admin_actions_created_at ON public.admin_actions USING btree (created_at);
 
 
 --
--- Name: idx_admin_actions_type; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_admin_actions_type; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_admin_actions_type ON public.admin_actions USING btree (action_type);
 
 
 --
--- Name: idx_admin_users_email; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_admin_users_email; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_admin_users_email ON public.admin_users USING btree (email);
 
 
 --
--- Name: idx_admin_users_username; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_admin_users_username; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_admin_users_username ON public.admin_users USING btree (username);
 
 
 --
--- Name: idx_broadcast_logs_broadcast; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_broadcast_logs_broadcast; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_broadcast_logs_broadcast ON public.broadcast_logs USING btree (broadcast_id);
 
 
 --
--- Name: idx_broadcasts_scheduled; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_broadcasts_scheduled; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_broadcasts_scheduled ON public.broadcasts USING btree (scheduled_for) WHERE ((status)::text = 'scheduled'::text);
 
 
 --
--- Name: idx_broadcasts_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_broadcasts_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_broadcasts_status ON public.broadcasts USING btree (status);
 
 
 --
--- Name: idx_card_transactions_card_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_card_transactions_card_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_card_transactions_card_id ON public.card_transactions USING btree (card_id);
 
 
 --
--- Name: idx_card_transactions_date; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_card_transactions_date; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_card_transactions_date ON public.card_transactions USING btree (transaction_date);
 
 
 --
--- Name: idx_card_transactions_type; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_card_transactions_type; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_card_transactions_type ON public.card_transactions USING btree (transaction_type);
 
 
 --
--- Name: idx_card_transactions_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_card_transactions_user_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_card_transactions_user_id ON public.card_transactions USING btree (user_id);
 
 
 --
--- Name: idx_cards_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_cards_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_cards_status ON public.cards USING btree (status);
 
 
 --
--- Name: idx_cards_strow_card_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_cards_strow_card_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_cards_strow_card_id ON public.cards USING btree (strow_card_id);
 
 
 --
--- Name: idx_cards_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_cards_user_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_cards_user_id ON public.cards USING btree (user_id);
 
 
 --
--- Name: idx_deposit_payments_created_at; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposit_payments_created_at; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposit_payments_created_at ON public.deposit_payments USING btree (created_at);
 
 
 --
--- Name: idx_deposit_payments_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposit_payments_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposit_payments_status ON public.deposit_payments USING btree (status);
 
 
 --
--- Name: idx_deposit_payments_telegram_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposit_payments_telegram_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposit_payments_telegram_id ON public.deposit_payments USING btree (telegram_id);
 
 
 --
--- Name: idx_deposit_payments_transaction_number; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposit_payments_transaction_number; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposit_payments_transaction_number ON public.deposit_payments USING btree (transaction_number);
 
 
 --
--- Name: idx_deposit_payments_validation_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposit_payments_validation_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposit_payments_validation_status ON public.deposit_payments USING btree (validation_status);
 
 
 --
--- Name: idx_deposits_created_at; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposits_created_at; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposits_created_at ON public.deposits USING btree (created_at);
 
 
 --
--- Name: idx_deposits_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposits_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposits_status ON public.deposits USING btree (status);
 
 
 --
--- Name: idx_deposits_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposits_user_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposits_user_id ON public.deposits USING btree (user_id);
 
 
 --
--- Name: idx_deposits_wallet_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_deposits_wallet_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_deposits_wallet_id ON public.deposits USING btree (wallet_id);
 
 
 --
--- Name: idx_giveaway_entries_broadcast; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_giveaway_entries_broadcast; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_giveaway_entries_broadcast ON public.giveaway_entries USING btree (broadcast_id);
 
 
 --
--- Name: idx_giveaway_entries_user; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_giveaway_entries_user; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_giveaway_entries_user ON public.giveaway_entries USING btree (user_id);
 
 
 --
--- Name: idx_user_registrations_is_registered; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_registrations_is_registered; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_user_registrations_is_registered ON public.user_registrations USING btree (is_registered);
 
 
 --
--- Name: idx_user_registrations_kyc_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_registrations_kyc_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_user_registrations_kyc_status ON public.user_registrations USING btree (kyc_status);
 
 
 --
--- Name: idx_user_registrations_state; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_registrations_state; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_user_registrations_state ON public.user_registrations USING btree (registration_state);
 
 
 --
--- Name: idx_user_registrations_strowallet_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_registrations_strowallet_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_user_registrations_strowallet_id ON public.user_registrations USING btree (strowallet_customer_id);
 
 
 --
--- Name: idx_user_registrations_telegram_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_user_registrations_telegram_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_user_registrations_telegram_id ON public.user_registrations USING btree (telegram_user_id);
 
 
 --
--- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
--- Name: idx_users_kyc_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_kyc_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_users_kyc_status ON public.users USING btree (kyc_status);
 
 
 --
--- Name: idx_users_telegram_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_telegram_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE UNIQUE INDEX idx_users_telegram_id ON public.users USING btree (telegram_id) WHERE (telegram_id IS NOT NULL);
 
 
 --
--- Name: idx_wallet_transactions_status; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_wallet_transactions_status; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_wallet_transactions_status ON public.wallet_transactions USING btree (status);
 
 
 --
--- Name: idx_wallet_transactions_type; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_wallet_transactions_type; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_wallet_transactions_type ON public.wallet_transactions USING btree (transaction_type);
 
 
 --
--- Name: idx_wallet_transactions_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_wallet_transactions_user_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_wallet_transactions_user_id ON public.wallet_transactions USING btree (user_id);
 
 
 --
--- Name: idx_wallet_transactions_wallet_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_wallet_transactions_wallet_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_wallet_transactions_wallet_id ON public.wallet_transactions USING btree (wallet_id);
 
 
 --
--- Name: idx_wallets_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_wallets_user_id; Type: INDEX; Schema: public; Owner: neondb_owner
 --
 
 CREATE INDEX idx_wallets_user_id ON public.wallets USING btree (user_id);
 
 
 --
--- Name: deposit_payments trigger_deposit_payments_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: deposit_payments trigger_deposit_payments_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER trigger_deposit_payments_updated_at BEFORE UPDATE ON public.deposit_payments FOR EACH ROW EXECUTE FUNCTION public.update_deposit_payments_updated_at();
 
 
 --
--- Name: admin_users update_admin_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: admin_users update_admin_users_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_admin_users_updated_at BEFORE UPDATE ON public.admin_users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: cards update_cards_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: cards update_cards_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_cards_updated_at BEFORE UPDATE ON public.cards FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: deposits update_deposits_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: deposits update_deposits_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_deposits_updated_at BEFORE UPDATE ON public.deposits FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: users update_users_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON public.users FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: wallet_transactions update_wallet_transactions_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: wallet_transactions update_wallet_transactions_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_wallet_transactions_updated_at BEFORE UPDATE ON public.wallet_transactions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: wallets update_wallets_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
+-- Name: wallets update_wallets_updated_at; Type: TRIGGER; Schema: public; Owner: neondb_owner
 --
 
 CREATE TRIGGER update_wallets_updated_at BEFORE UPDATE ON public.wallets FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
--- Name: admin_actions admin_actions_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: admin_actions admin_actions_admin_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.admin_actions
@@ -1651,7 +1664,7 @@ ALTER TABLE ONLY public.admin_actions
 
 
 --
--- Name: broadcast_logs broadcast_logs_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: broadcast_logs broadcast_logs_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcast_logs
@@ -1659,7 +1672,7 @@ ALTER TABLE ONLY public.broadcast_logs
 
 
 --
--- Name: broadcasts broadcasts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: broadcasts broadcasts_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.broadcasts
@@ -1667,7 +1680,7 @@ ALTER TABLE ONLY public.broadcasts
 
 
 --
--- Name: card_transactions card_transactions_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: card_transactions card_transactions_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.card_transactions
@@ -1675,7 +1688,7 @@ ALTER TABLE ONLY public.card_transactions
 
 
 --
--- Name: card_transactions card_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: card_transactions card_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.card_transactions
@@ -1683,7 +1696,7 @@ ALTER TABLE ONLY public.card_transactions
 
 
 --
--- Name: card_transactions card_transactions_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: card_transactions card_transactions_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.card_transactions
@@ -1691,7 +1704,7 @@ ALTER TABLE ONLY public.card_transactions
 
 
 --
--- Name: cards cards_creation_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cards cards_creation_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards
@@ -1699,7 +1712,7 @@ ALTER TABLE ONLY public.cards
 
 
 --
--- Name: cards cards_frozen_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cards cards_frozen_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards
@@ -1707,7 +1720,7 @@ ALTER TABLE ONLY public.cards
 
 
 --
--- Name: cards cards_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: cards cards_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.cards
@@ -1715,7 +1728,7 @@ ALTER TABLE ONLY public.cards
 
 
 --
--- Name: deposits deposits_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_approved_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1723,7 +1736,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: deposits deposits_rejected_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_rejected_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1731,7 +1744,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: deposits deposits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1739,7 +1752,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: deposits deposits_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1747,7 +1760,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: deposits deposits_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposits deposits_wallet_transaction_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposits
@@ -1755,7 +1768,7 @@ ALTER TABLE ONLY public.deposits
 
 
 --
--- Name: deposit_payments fk_deposit_payments_user; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: deposit_payments fk_deposit_payments_user; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.deposit_payments
@@ -1763,7 +1776,7 @@ ALTER TABLE ONLY public.deposit_payments
 
 
 --
--- Name: giveaway_entries giveaway_entries_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: giveaway_entries giveaway_entries_broadcast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.giveaway_entries
@@ -1771,7 +1784,7 @@ ALTER TABLE ONLY public.giveaway_entries
 
 
 --
--- Name: giveaway_entries giveaway_entries_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: giveaway_entries giveaway_entries_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.giveaway_entries
@@ -1779,7 +1792,7 @@ ALTER TABLE ONLY public.giveaway_entries
 
 
 --
--- Name: settings settings_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: settings settings_updated_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.settings
@@ -1787,7 +1800,7 @@ ALTER TABLE ONLY public.settings
 
 
 --
--- Name: wallet_transactions wallet_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallet_transactions wallet_transactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallet_transactions
@@ -1795,7 +1808,7 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
--- Name: wallet_transactions wallet_transactions_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallet_transactions wallet_transactions_wallet_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallet_transactions
@@ -1803,11 +1816,25 @@ ALTER TABLE ONLY public.wallet_transactions
 
 
 --
--- Name: wallets wallets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: wallets wallets_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: neondb_owner
 --
 
 ALTER TABLE ONLY public.wallets
     ADD CONSTRAINT wallets_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO neon_superuser WITH GRANT OPTION;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: cloud_admin
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE cloud_admin IN SCHEMA public GRANT ALL ON TABLES TO neon_superuser WITH GRANT OPTION;
 
 
 --
