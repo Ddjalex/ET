@@ -405,10 +405,7 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
         $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
         $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";
         $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $msg .= "⏳ <b>What's Next:</b>\n";
-        $msg .= "• Your payment is under review\n";
-        $msg .= "• Our admin team will verify it shortly\n";
-        $msg .= "• You'll be notified once approved\n\n";
+        $msg .= "⏳ Your payment is under review\n\n";
         $msg .= "💬 Contact support if you need help.";
         
         sendMessage($chatId, $msg, true, $userId);

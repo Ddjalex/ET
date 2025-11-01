@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                     throw new Exception('Payment not found or already processed');
                 }
                 
-                dbQuery("UPDATE deposit_payments SET status = 'approved', verified_by = 'admin', verified_at = NOW(), completed_at = NOW() WHERE id = ?", 
+                dbQuery("UPDATE deposit_payments SET status = 'completed', verified_by = 'admin', verified_at = NOW(), completed_at = NOW() WHERE id = ?", 
                        [$paymentId], $db);
                 
                 dbQuery("INSERT INTO admin_actions (admin_id, action_type, target_table, target_id, action_description, payload) 
@@ -39,6 +39,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
                        [$adminId, $paymentId, json_encode(['amount_usd' => $payment['amount_usd'], 'user_id' => $payment['user_id']])], $db);
                 
                 $db->commit();
+                
+                $congratsMsg = "🎉 <b>Congratulations!</b>\n\n";
+                $congratsMsg .= "✅ Your payment has been approved!\n\n";
+                $congratsMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+                $congratsMsg .= "💵 <b>Amount:</b> $" . number_format($payment['amount_usd'], 2) . " USD\n";
+                $congratsMsg .= "💰 <b>Status:</b> Completed ✅\n\n";
+                $congratsMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
+                $congratsMsg .= "Your funds have been credited to your account.\n";
+                $congratsMsg .= "Thank you for using our service!";
+                
+                if (defined('BOT_TOKEN') && BOT_TOKEN) {
+                    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+                    $payload = [
+                        'chat_id' => $payment['telegram_id'],
+                        'text' => $congratsMsg,
+                        'parse_mode' => 'HTML'
+                    ];
+                    
+                    $ch = curl_init($url);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+                    curl_exec($ch);
+                    curl_close($ch);
+                }
                 
                 $message = "Payment approved successfully! $" . number_format($payment['amount_usd'], 2) . " approved for user.";
                 $messageType = 'success';
@@ -78,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['csrf_token'])) {
 
 $filter = $_GET['filter'] ?? 'pending';
 $whereClause = match($filter) {
-    'approved' => "dp.status = 'approved'",
+    'approved' => "dp.status = 'completed'",
     'rejected' => "dp.status = 'rejected'",
     'all' => "1=1",
     default => "dp.status = 'pending'"
@@ -96,7 +124,7 @@ $payments = dbFetchAll("
 $statusCounts = dbFetchOne("
     SELECT 
         COUNT(*) FILTER (WHERE status = 'pending') as pending,
-        COUNT(*) FILTER (WHERE status = 'approved') as approved,
+        COUNT(*) FILTER (WHERE status = 'completed') as approved,
         COUNT(*) FILTER (WHERE status = 'rejected') as rejected,
         COUNT(*) as total
     FROM deposit_payments
@@ -444,7 +472,7 @@ $statusCounts = dbFetchOne("
                             <?php
                             $statusStyles = [
                                 'pending' => ['bg' => 'rgba(234, 179, 8, 0.15)', 'border' => 'rgba(234, 179, 8, 0.4)', 'text' => '#f59e0b', 'icon' => '⏳'],
-                                'approved' => ['bg' => 'rgba(34, 197, 94, 0.15)', 'border' => 'rgba(34, 197, 94, 0.4)', 'text' => '#10b981', 'icon' => '✅'],
+                                'completed' => ['bg' => 'rgba(34, 197, 94, 0.15)', 'border' => 'rgba(34, 197, 94, 0.4)', 'text' => '#10b981', 'icon' => '✅'],
                                 'rejected' => ['bg' => 'rgba(239, 68, 68, 0.15)', 'border' => 'rgba(239, 68, 68, 0.4)', 'text' => '#ef4444', 'icon' => '❌']
                             ];
                             $status = $payment['status'];

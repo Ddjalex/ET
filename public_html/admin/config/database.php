@@ -5,6 +5,11 @@
 // Load environment variables from .env file
 require_once __DIR__ . '/../../../secrets/load_env.php';
 
+// Define BOT_TOKEN constant for Telegram API access
+if (!defined('BOT_TOKEN')) {
+    define('BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: getenv('BOT_TOKEN') ?: '');
+}
+
 // Global database connection (singleton pattern)
 $_DB_CONNECTION = null;
 
