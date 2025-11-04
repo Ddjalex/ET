@@ -305,6 +305,30 @@ function handleCallbackQuery($callbackQuery) {
             return;
         }
         requestAdminDeposit($chatId, $userId);
+    } elseif ($data === 'deposit_etb') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval before requesting deposits.", false);
+            return;
+        }
+        handleDepositETB($chatId, $userId);
+    } elseif ($data === 'deposit_trc20') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", false);
+            return;
+        }
+        handleDepositTRC20($chatId, $userId);
+    } elseif ($data === 'view_transactions') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", false);
+            return;
+        }
+        handleViewTransactions($chatId, $userId);
+    } elseif ($data === 'refresh_wallet') {
+        if ($kycStatus !== 'approved') {
+            sendMessage($chatId, "⏳ Your KYC is still under review. Please wait for approval.", false);
+            return;
+        }
+        handleWallet($chatId, $userId);
     }
 }
 
@@ -1394,29 +1418,151 @@ function handleWallet($chatId, $userId) {
     $balanceUSD = $wallet ? (float)$wallet['balance_usd'] : 0.00;
     $balanceETB = $wallet ? (float)$wallet['balance_etb'] : 0.00;
     
-    $msg = "💰 <b>Your Wallet</b>\n\n";
-    $msg .= "💵 <b>USD:</b> $" . number_format($balanceUSD, 2) . "\n";
-    $msg .= "💴 <b>ETB:</b> " . number_format($balanceETB, 2) . " Birr\n";
-    $msg .= "\n━━━━━━━━━━━━━━━━━━\n";
+    // Get recent transaction count
+    $stmt = $db->prepare("SELECT COUNT(*) as count FROM wallet_transactions WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $txCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+    
+    // Enhanced wallet display with emojis and better formatting
+    $msg = "┏━━━━━━━━━━━━━━━━━━┓\n";
+    $msg .= "       💰 <b>YOUR WALLET</b> 💰\n";
+    $msg .= "┗━━━━━━━━━━━━━━━━━━┛\n\n";
+    
+    $msg .= "╔═══════════════════╗\n";
+    $msg .= "   <b>💵 USD Balance</b>\n";
+    $msg .= "   <code>$" . number_format($balanceUSD, 2) . "</code>\n";
+    $msg .= "╚═══════════════════╝\n\n";
+    
+    $msg .= "╔═══════════════════╗\n";
+    $msg .= "   <b>💴 ETB Balance</b>\n";
+    $msg .= "   <code>" . number_format($balanceETB, 2) . " Birr</code>\n";
+    $msg .= "╚═══════════════════╝\n\n";
+    
+    $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
     
     if ($balanceUSD > 0) {
-        $msg .= "✅ You have funds available!\n";
-        $msg .= "💳 Use /create_card to create a virtual card\n\n";
-        sendMessage($chatId, $msg, true, $userId);
+        $msg .= "✅ <b>Status:</b> Funds Available\n";
+        $msg .= "📊 <b>Transactions:</b> {$txCount}\n";
+        $msg .= "💳 <b>Ready to:</b> Create Virtual Cards\n";
     } else {
-        $msg .= "📥 To deposit to wallet, click button below\n";
+        $msg .= "📊 <b>Transactions:</b> {$txCount}\n";
+        $msg .= "💡 <b>Tip:</b> Add funds to get started!\n";
+    }
+    
+    // Create inline keyboard with quick actions
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '💵 Add ETB', 'callback_data' => 'deposit_etb'],
+                ['text' => '💎 Add USDT', 'callback_data' => 'deposit_trc20']
+            ],
+            [
+                ['text' => '📋 Transaction History', 'callback_data' => 'view_transactions']
+            ],
+            [
+                ['text' => '🔄 Refresh Balance', 'callback_data' => 'refresh_wallet']
+            ]
+        ]
+    ];
+    
+    sendMessageWithKeyboard($chatId, $msg, $inlineKeyboard);
+}
+
+function handleViewTransactions($chatId, $userId) {
+    sendTypingAction($chatId);
+    
+    // Check KYC status
+    if (!checkKYCStatus($chatId, $userId)) {
+        return;
+    }
+    
+    // Get user from database
+    $db = getDBConnection();
+    $stmt = $db->prepare("SELECT * FROM users WHERE telegram_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$user) {
+        sendMessage($chatId, "❌ User not found.", false);
+        return;
+    }
+    
+    // Get recent transactions
+    $stmt = $db->prepare("
+        SELECT wt.*, 
+               CASE 
+                   WHEN wt.type = 'deposit' THEN '💰'
+                   WHEN wt.type = 'withdrawal' THEN '💸'
+                   WHEN wt.type = 'card_purchase' THEN '💳'
+                   ELSE '📊'
+               END as emoji
+        FROM wallet_transactions wt
+        WHERE wt.user_id = ?
+        ORDER BY wt.created_at DESC
+        LIMIT 10
+    ");
+    $stmt->execute([$user['id']]);
+    $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    if (empty($transactions)) {
+        $msg = "📋 <b>Transaction History</b>\n\n";
+        $msg .= "No transactions found.\n\n";
+        $msg .= "💡 Start by adding funds to your wallet!";
         
-        // Create inline button for deposit
         $inlineKeyboard = [
             'inline_keyboard' => [
                 [
-                    ['text' => '💵 Deposit to Wallet', 'callback_data' => 'deposit_etb']
+                    ['text' => '💵 Add ETB', 'callback_data' => 'deposit_etb']
+                ],
+                [
+                    ['text' => '🔙 Back to Wallet', 'callback_data' => 'refresh_wallet']
                 ]
             ]
         ];
         
         sendMessageWithKeyboard($chatId, $msg, $inlineKeyboard);
+        return;
     }
+    
+    $msg = "┏━━━━━━━━━━━━━━━━━━┓\n";
+    $msg .= "  📋 <b>TRANSACTION HISTORY</b>\n";
+    $msg .= "┗━━━━━━━━━━━━━━━━━━┛\n\n";
+    $msg .= "<i>Last 10 transactions:</i>\n\n";
+    
+    foreach ($transactions as $index => $tx) {
+        $num = $index + 1;
+        $emoji = $tx['emoji'];
+        $type = ucfirst($tx['type']);
+        $amount = number_format((float)$tx['amount'], 2);
+        $currency = strtoupper($tx['currency'] ?? 'USD');
+        $status = $tx['status'] === 'completed' ? '✅' : ($tx['status'] === 'pending' ? '⏳' : '❌');
+        $date = date('M d, Y', strtotime($tx['created_at']));
+        
+        $msg .= "━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "{$emoji} <b>{$type}</b> {$status}\n";
+        $msg .= "💵 <code>{$amount} {$currency}</code>\n";
+        $msg .= "📅 {$date}\n";
+        
+        if (!empty($tx['description'])) {
+            $msg .= "📝 " . htmlspecialchars($tx['description']) . "\n";
+        }
+    }
+    
+    $msg .= "\n━━━━━━━━━━━━━━━━━━\n";
+    $msg .= "Showing last 10 transactions";
+    
+    $inlineKeyboard = [
+        'inline_keyboard' => [
+            [
+                ['text' => '🔄 Refresh', 'callback_data' => 'view_transactions']
+            ],
+            [
+                ['text' => '🔙 Back to Wallet', 'callback_data' => 'refresh_wallet']
+            ]
+        ]
+    ];
+    
+    sendMessageWithKeyboard($chatId, $msg, $inlineKeyboard);
 }
 
 function handleDepositTRC20($chatId, $userId) {
