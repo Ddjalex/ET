@@ -1141,13 +1141,15 @@ function handleCreateCard($chatId, $userId) {
     $processingMsg .= "Please wait a moment...";
     sendMessage($chatId, $processingMsg, false);
     
-    // Prepare API parameters - using Addisu's StroWallet account
+    // Step 1: Create card with minimal initial funding ($0.01)
+    // This minimizes the amount needed in Addisu's StroWallet account
+    $initialFunding = 0.01;
     $cardParams = [
         'name_on_card' => $nameOnCard,
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
-        'amount' => (string)$cardAmount,  // Card funded amount
-        'customerEmail' => STROWALLET_EMAIL  // Addisu's account creates the card
+        'amount' => (string)$initialFunding,  // Minimal initial amount
+        'customerEmail' => STROWALLET_EMAIL
     ];
     
     // Add sandbox mode if enabled
@@ -1155,12 +1157,46 @@ function handleCreateCard($chatId, $userId) {
         $cardParams['mode'] = 'sandbox';
     }
     
-    // Create card using Addisu's StroWallet account (real card creation)
+    // Create card
     $result = callStroWalletAPI('/bitvcard/create-card', 'POST', $cardParams, true);
     
     if (isset($result['error'])) {
         sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
         return;
+    }
+    
+    // Get card ID from creation response
+    $cardId = $result['response']['card_id'] ?? $result['card_id'] ?? null;
+    
+    if (!$cardId) {
+        sendMessage($chatId, "❌ Card created but ID not found. Please contact support.", false);
+        return;
+    }
+    
+    // Step 2: Fund the card with user's amount using Fund Card API
+    // Fund Card fee: $1.50 + 1.4% (according to StroWallet docs)
+    $fundingAmount = $cardAmount - $initialFunding;  // Remaining amount to add
+    $fundParams = [
+        'card_id' => $cardId,
+        'amount' => (string)$fundingAmount,
+        'public_key' => STROW_PUBLIC_KEY
+    ];
+    
+    if (USE_SANDBOX_MODE) {
+        $fundParams['mode'] = 'sandbox';
+    }
+    
+    // Fund the card
+    $fundResult = callStroWalletAPI('/bitvcard/fund-card', 'POST', $fundParams, true);
+    
+    if (isset($fundResult['error'])) {
+        // Card was created but funding failed
+        $msg = "⚠️ <b>Card Created with Limited Funds</b>\n\n";
+        $msg .= "Your card was created but funding failed.\n";
+        $msg .= "Card ID: <code>{$cardId}</code>\n\n";
+        $msg .= "Error: " . $fundResult['error'];
+        sendMessage($chatId, $msg, false);
+        // Continue to record the card anyway
     }
     
     // Extract card details from StroWallet response
@@ -1173,6 +1209,7 @@ function handleCreateCard($chatId, $userId) {
     $stmt = $db->prepare("SELECT * FROM wallets WHERE user_id = ?");
     $stmt->execute([$user['id']]);
     $walletRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+    $walletId = $walletRecord ? $walletRecord['id'] : null;
     $balanceBefore = $walletRecord ? (float)$walletRecord['balance_usd'] : 0.00;
     $balanceAfter = $balanceBefore - $walletBalance;  // Deduct full amount (fee + card amount)
     
@@ -1180,9 +1217,9 @@ function handleCreateCard($chatId, $userId) {
     $stmt = $db->prepare("UPDATE wallets SET balance_usd = balance_usd - ? WHERE user_id = ?");
     $stmt->execute([$walletBalance, $user['id']]);
     
-    // Record wallet transaction with correct column name
-    $stmt = $db->prepare("INSERT INTO wallet_transactions (user_id, amount_usd, transaction_type, description, balance_before_usd, balance_after_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-    $stmt->execute([$user['id'], -$walletBalance, 'card_creation', "Card created: {$nameOnCard} (Fee: $" . number_format($cardCreationFee, 2) . ")", $balanceBefore, $balanceAfter]);
+    // Record wallet transaction with wallet_id
+    $stmt = $db->prepare("INSERT INTO wallet_transactions (wallet_id, user_id, amount_usd, transaction_type, description, balance_before_usd, balance_after_usd, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->execute([$walletId, $user['id'], -$walletBalance, 'card_creation', "Card created: {$nameOnCard} (Fee: $" . number_format($cardCreationFee, 2) . ")", $balanceBefore, $balanceAfter, 'completed']);
     
     // Store card in database linked to customer
     if ($cardId) {
