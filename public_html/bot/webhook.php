@@ -171,6 +171,14 @@ if ($text === '/register') {
     exit;
 }
 
+// Check if user is awaiting USD amount for ETB deposit
+if ($userState === 'awaiting_usd_amount_etb') {
+    processETBDepositUSDAmount($chatId, $userId, $text);
+    http_response_code(200);
+    echo 'OK';
+    exit;
+}
+
 // Check if user is awaiting deposit amount input
 if ($userState === 'awaiting_amount') {
     processDepositAmount_v2($chatId, $userId, $text);
@@ -1623,7 +1631,7 @@ function handleSupport($chatId, $userId = null) {
 function handleDepositETB($chatId, $userId = null) {
     sendTypingAction($chatId);
     
-    // Get deposit accounts from database
+    // Get exchange rate and deposit fee from settings
     $db = getDBConnection();
     if (!$db) {
         sendMessage($chatId, "❌ Service temporarily unavailable. Please try again later.", true, $userId);
@@ -1631,6 +1639,94 @@ function handleDepositETB($chatId, $userId = null) {
     }
     
     try {
+        // Get exchange rate
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'exchange_rate_usd_to_etb'");
+        $stmt->execute();
+        $rateResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $exchangeRate = 172; // Default
+        if ($rateResult) {
+            $rateData = json_decode($rateResult['value'], true);
+            $exchangeRate = $rateData['rate'] ?? 172;
+        }
+        
+        // Get deposit fee
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_fee'");
+        $stmt->execute();
+        $feeResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $depositFee = 430; // Default
+        if ($feeResult) {
+            $feeData = json_decode($feeResult['value'], true);
+            $depositFee = $feeData['flat'] ?? 430;
+        }
+        
+        // Ask user for USD amount
+        $msg = "💵 <b>Deposit ETB</b>\n\n";
+        $msg .= "💱 <b>Current Exchange Rate:</b>\n";
+        $msg .= "1 USD = " . number_format($exchangeRate, 2) . " ETB\n\n";
+        $msg .= "💰 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "💵 <b>How much USD do you want to deposit?</b>\n\n";
+        $msg .= "Please enter the USD amount (numbers only):\n";
+        $msg .= "<i>Example: 10 or 50 or 100</i>";
+        
+        sendMessageWithReturn($chatId, $msg, '❌ Cancel', 'cancel');
+        
+        // Set user state to await USD amount
+        updateUserRegistrationState($userId, 'awaiting_usd_amount_etb');
+        
+    } catch (Exception $e) {
+        error_log("Error in handleDepositETB: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error loading deposit information. Please try again later.", true, $userId);
+    }
+}
+
+function processETBDepositUSDAmount($chatId, $userId, $text) {
+    sendTypingAction($chatId);
+    
+    // Validate USD amount input
+    $usdAmount = floatval($text);
+    
+    if ($usdAmount <= 0 || !is_numeric($text)) {
+        $msg = "❌ Invalid amount. Please enter a valid number.\n\n";
+        $msg .= "Example: 10 or 50 or 100";
+        sendMessageWithReturn($chatId, $msg, '❌ Cancel', 'cancel');
+        return;
+    }
+    
+    // Get exchange rate and deposit fee from database
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Service temporarily unavailable. Please try again later.", false);
+        updateUserRegistrationState($userId, 'idle');
+        return;
+    }
+    
+    try {
+        // Get exchange rate
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'exchange_rate_usd_to_etb'");
+        $stmt->execute();
+        $rateResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $exchangeRate = 172; // Default
+        if ($rateResult) {
+            $rateData = json_decode($rateResult['value'], true);
+            $exchangeRate = $rateData['rate'] ?? 172;
+        }
+        
+        // Get deposit fee
+        $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_fee'");
+        $stmt->execute();
+        $feeResult = $stmt->fetch(PDO::FETCH_ASSOC);
+        $depositFee = 430; // Default
+        if ($feeResult) {
+            $feeData = json_decode($feeResult['value'], true);
+            $depositFee = $feeData['flat'] ?? 430;
+        }
+        
+        // Calculate ETB amount
+        $etbAmountBeforeFee = $usdAmount * $exchangeRate;
+        $totalEtbAmount = $etbAmountBeforeFee + $depositFee;
+        
+        // Get deposit accounts
         $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_accounts'");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1640,6 +1736,7 @@ function handleDepositETB($chatId, $userId = null) {
             $msg .= "No deposit methods are currently configured.\n\n";
             $msg .= "Please contact support for assistance.";
             sendMessage($chatId, $msg, true, $userId);
+            updateUserRegistrationState($userId, 'idle');
             return;
         }
         
@@ -1650,8 +1747,12 @@ function handleDepositETB($chatId, $userId = null) {
             $msg .= "No deposit methods are currently configured.\n\n";
             $msg .= "Please contact support for assistance.";
             sendMessage($chatId, $msg, true, $userId);
+            updateUserRegistrationState($userId, 'idle');
             return;
         }
+        
+        // Store amounts in user session for later use
+        storeETBDepositAmounts($userId, $usdAmount, $etbAmountBeforeFee, $totalEtbAmount, $exchangeRate, $depositFee);
         
         // Build inline keyboard with payment methods
         $keyboard = [];
@@ -1666,8 +1767,16 @@ function handleDepositETB($chatId, $userId = null) {
             }
         }
         
-        // Send message with payment method options
-        $msg = "💵 <b>Deposit ETB</b>\n\n";
+        // Send message with calculated amounts and payment method options
+        $msg = "💵 <b>Deposit Summary</b>\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "💰 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
+        $msg .= "💱 <b>Exchange Rate:</b> 1 USD = " . number_format($exchangeRate, 2) . " ETB\n";
+        $msg .= "💵 <b>ETB Equivalent:</b> " . number_format($etbAmountBeforeFee, 2) . " ETB\n";
+        $msg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        $msg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $msg .= "Please select your preferred payment method:\n\n";
         $msg .= "👇 Click on a payment method below to see the account details.";
         
@@ -1689,9 +1798,35 @@ function handleDepositETB($chatId, $userId = null) {
         curl_exec($ch);
         curl_close($ch);
         
+        // Reset state - user will click payment method button
+        updateUserRegistrationState($userId, 'idle');
+        
     } catch (Exception $e) {
-        error_log("Error fetching deposit accounts: " . $e->getMessage());
-        sendMessage($chatId, "❌ Error loading payment methods. Please try again later.", true, $userId);
+        error_log("Error in processETBDepositUSDAmount: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error processing your request. Please try again later.", false);
+        updateUserRegistrationState($userId, 'idle');
+    }
+}
+
+function storeETBDepositAmounts($userId, $usdAmount, $etbBeforeFee, $totalEtb, $exchangeRate, $depositFee) {
+    $db = getDBConnection();
+    if (!$db) return;
+    
+    try {
+        // Store in user_registrations table temporarily
+        $depositData = json_encode([
+            'usd_amount' => $usdAmount,
+            'etb_before_fee' => $etbBeforeFee,
+            'total_etb' => $totalEtb,
+            'exchange_rate' => $exchangeRate,
+            'deposit_fee' => $depositFee,
+            'timestamp' => time()
+        ]);
+        
+        $stmt = $db->prepare("UPDATE user_registrations SET temp_deposit_data = ? WHERE telegram_user_id = ?");
+        $stmt->execute([$depositData, $userId]);
+    } catch (Exception $e) {
+        error_log("Error storing ETB deposit amounts: " . $e->getMessage());
     }
 }
 
@@ -1709,6 +1844,25 @@ function handleETBPaymentMethodSelection($chatId, $userId, $callbackData) {
     }
     
     try {
+        // Get stored deposit amounts
+        $stmt = $db->prepare("SELECT temp_deposit_data FROM user_registrations WHERE telegram_user_id = ?");
+        $stmt->execute([$userId]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        $depositData = null;
+        $usdAmount = null;
+        $totalEtbAmount = null;
+        $exchangeRate = null;
+        $depositFee = null;
+        
+        if ($userData && !empty($userData['temp_deposit_data'])) {
+            $depositData = json_decode($userData['temp_deposit_data'], true);
+            $usdAmount = $depositData['usd_amount'] ?? null;
+            $totalEtbAmount = $depositData['total_etb'] ?? null;
+            $exchangeRate = $depositData['exchange_rate'] ?? null;
+            $depositFee = $depositData['deposit_fee'] ?? null;
+        }
+        
         $stmt = $db->prepare("SELECT value FROM settings WHERE key = 'deposit_accounts'");
         $stmt->execute();
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1741,6 +1895,16 @@ function handleETBPaymentMethodSelection($chatId, $userId, $callbackData) {
         $instructions = $selectedAccount['instructions'] ?? '';
         
         $msg = "💳 <b>{$method}</b>\n\n";
+        
+        // Show amount details if available
+        if ($usdAmount && $totalEtbAmount) {
+            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+            $msg .= "💰 <b>Deposit Amount:</b>\n";
+            $msg .= "• USD: $" . number_format($usdAmount, 2) . "\n";
+            $msg .= "• Total to Pay: <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
+            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+        }
+        
         $msg .= "📋 <b>Payment Details:</b>\n\n";
         $msg .= "👤 <b>Account Name:</b>\n";
         $msg .= "<code>{$accountName}</code>\n\n";
@@ -1750,6 +1914,12 @@ function handleETBPaymentMethodSelection($chatId, $userId, $callbackData) {
         if (!empty($instructions)) {
             $msg .= "📝 <b>Instructions:</b>\n";
             $msg .= "{$instructions}\n\n";
+        }
+        
+        if ($totalEtbAmount) {
+            $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+            $msg .= "💰 <b>Please send exactly:</b>\n";
+            $msg .= "<b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
         }
         
         $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
