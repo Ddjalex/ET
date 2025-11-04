@@ -14,15 +14,16 @@ ini_set('error_log', '/tmp/telegram_bot_errors.log');
 require_once __DIR__ . '/../../secrets/load_env.php';
 
 // Configuration - Use environment variables from Replit Secrets
-define('BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: '');
+// Priority: Replit Secrets > .env file
+define('BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('BOT_TOKEN') ?: ''));
 define('STROW_BASE', 'https://strowallet.com/api');
-define('STROW_PUBLIC_KEY', $_ENV['STROWALLET_API_KEY'] ?? getenv('STROWALLET_API_KEY') ?: '');
-define('STROW_SECRET_KEY', $_ENV['STROWALLET_WEBHOOK_SECRET'] ?? getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
-define('STROWALLET_EMAIL', $_ENV['STROWALLET_EMAIL'] ?? getenv('STROWALLET_EMAIL') ?: '');
-define('ADMIN_CHAT_ID', $_ENV['ADMIN_CHAT_ID'] ?? getenv('ADMIN_CHAT_ID') ?: '');
-define('SUPPORT_URL', $_ENV['SUPPORT_URL'] ?? getenv('SUPPORT_URL') ?? '');
-define('REFERRAL_TEXT', $_ENV['REFERRAL_TEXT'] ?? getenv('REFERRAL_TEXT') ?: 'Join me on StroWallet!');
-define('TELEGRAM_SECRET_TOKEN', $_ENV['TELEGRAM_SECRET_TOKEN'] ?? getenv('TELEGRAM_SECRET_TOKEN') ?: '');
+define('STROW_PUBLIC_KEY', getenv('STROWALLET_API_KEY') ?: ($_ENV['STROWALLET_API_KEY'] ?? ''));
+define('STROW_SECRET_KEY', getenv('STROWALLET_WEBHOOK_SECRET') ?: ($_ENV['STROWALLET_WEBHOOK_SECRET'] ?? ''));
+define('STROWALLET_EMAIL', getenv('STROWALLET_EMAIL') ?: ($_ENV['STROWALLET_EMAIL'] ?? ''));
+define('ADMIN_CHAT_ID', getenv('ADMIN_CHAT_ID') ?: ($_ENV['ADMIN_CHAT_ID'] ?? ''));
+define('SUPPORT_URL', getenv('SUPPORT_URL') ?: ($_ENV['SUPPORT_URL'] ?? ''));
+define('REFERRAL_TEXT', getenv('REFERRAL_TEXT') ?: ($_ENV['REFERRAL_TEXT'] ?? 'Join me on StroWallet!'));
+define('TELEGRAM_SECRET_TOKEN', getenv('TELEGRAM_SECRET_TOKEN') ?: ($_ENV['TELEGRAM_SECRET_TOKEN'] ?? ''));
 
 // Mock mode for testing (set to true to use demo data)
 define('USE_MOCK_DATA', ($_ENV['USE_MOCK_DATA'] ?? getenv('USE_MOCK_DATA')) === 'true' || ($_ENV['USE_MOCK_DATA'] ?? getenv('USE_MOCK_DATA')) === '1');
