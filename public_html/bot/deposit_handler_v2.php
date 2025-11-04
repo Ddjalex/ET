@@ -245,10 +245,9 @@ function handleUserDepositPaymentSelection_v2($chatId, $userId, $callbackData) {
     $accountName = $account['account_name'];
     $accountNumber = $account['account_number'];
     
-    // Send payment instructions (WITHOUT showing fee breakdown)
+    // Send payment instructions (show only total ETB amount)
     $userMsg = "💰 <b>Payment Instructions</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $userMsg .= "💵 <b>Amount (USD):</b> $" . number_format($usdAmount, 2) . "\n";
     $userMsg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n";
     $userMsg .= "{$icon} <b>Payment Method:</b> {$methodName}\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
@@ -392,9 +391,8 @@ function handleDepositTransactionId_v2($chatId, $userId, $transactionId) {
         // Clear deposit state
         setUserDepositState($userId, null);
         
-        // Send payment to manual review (no automatic verification)
+        // Send payment confirmation to user (show only ETB total)
         $msg = "✅ <b>Payment Submitted!</b>\n\n";
-        $msg .= "💰 <b>Amount:</b> $" . number_format($depositData['usd_amount'], 2) . " USD\n";
         $msg .= "💸 <b>Total Paid:</b> " . number_format($depositData['etb_amount'], 2) . " ETB\n";
         $msg .= "📱 <b>Method:</b> " . ($depositData['payment_method'] ?? 'N/A') . "\n";
         $msg .= "🔖 <b>Transaction ID:</b> <code>" . htmlspecialchars($transactionId) . "</code>\n\n";

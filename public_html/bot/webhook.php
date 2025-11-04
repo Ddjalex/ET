@@ -1431,7 +1431,7 @@ function handleWallet($chatId, $userId) {
     $stmt->execute([$user['id']]);
     $txCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
     
-    // Enhanced wallet display with emojis and better formatting
+    // Enhanced wallet display with emojis and better formatting (USD only)
     $msg = "┏━━━━━━━━━━━━━━━━━━┓\n";
     $msg .= "       💰 <b>YOUR WALLET</b> 💰\n";
     $msg .= "┗━━━━━━━━━━━━━━━━━━┛\n\n";
@@ -1439,11 +1439,6 @@ function handleWallet($chatId, $userId) {
     $msg .= "╔═══════════════════╗\n";
     $msg .= "   <b>💵 USD Balance</b>\n";
     $msg .= "   <code>$" . number_format($balanceUSD, 2) . "</code>\n";
-    $msg .= "╚═══════════════════╝\n\n";
-    
-    $msg .= "╔═══════════════════╗\n";
-    $msg .= "   <b>💴 ETB Balance</b>\n";
-    $msg .= "   <code>" . number_format($balanceETB, 2) . " Birr</code>\n";
     $msg .= "╚═══════════════════╝\n\n";
     
     $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
@@ -1659,12 +1654,8 @@ function handleDepositETB($chatId, $userId = null) {
             $depositFee = $feeData['flat'] ?? 430;
         }
         
-        // Ask user for USD amount
+        // Ask user for USD amount (hide exchange rate and fee)
         $msg = "💵 <b>Deposit ETB</b>\n\n";
-        $msg .= "💱 <b>Current Exchange Rate:</b>\n";
-        $msg .= "1 USD = " . number_format($exchangeRate, 2) . " ETB\n\n";
-        $msg .= "💰 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $msg .= "💵 <b>How much USD do you want to deposit?</b>\n\n";
         $msg .= "Please enter the USD amount (numbers only):\n";
         $msg .= "<i>Example: 10 or 50 or 100</i>";
@@ -1767,13 +1758,8 @@ function processETBDepositUSDAmount($chatId, $userId, $text) {
             }
         }
         
-        // Send message with calculated amounts and payment method options
+        // Send message with total ETB amount only (hide all USD/breakdown)
         $msg = "💵 <b>Deposit Summary</b>\n\n";
-        $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-        $msg .= "💰 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
-        $msg .= "💱 <b>Exchange Rate:</b> 1 USD = " . number_format($exchangeRate, 2) . " ETB\n";
-        $msg .= "💵 <b>ETB Equivalent:</b> " . number_format($etbAmountBeforeFee, 2) . " ETB\n";
-        $msg .= "💸 <b>Deposit Fee:</b> " . number_format($depositFee, 2) . " ETB\n\n";
         $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
         $msg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
         $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
@@ -1896,12 +1882,10 @@ function handleETBPaymentMethodSelection($chatId, $userId, $callbackData) {
         
         $msg = "💳 <b>{$method}</b>\n\n";
         
-        // Show amount details if available
-        if ($usdAmount && $totalEtbAmount) {
+        // Show only total amount if available (hide USD breakdown)
+        if ($totalEtbAmount) {
             $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-            $msg .= "💰 <b>Deposit Amount:</b>\n";
-            $msg .= "• USD: $" . number_format($usdAmount, 2) . "\n";
-            $msg .= "• Total to Pay: <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
+            $msg .= "💰 <b>Total to Pay:</b> <b>" . number_format($totalEtbAmount, 2) . " ETB</b>\n\n";
             $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
         }
         
