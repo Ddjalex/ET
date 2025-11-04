@@ -1110,10 +1110,30 @@ function handleCreateCard($chatId, $userId) {
         $nameOnCard = 'Card Holder';
     }
     
+    // Calculate StroWallet card creation fee: $1.40 + 1% of amount
+    // Customer pays only this fee, card is funded from Addisu's balance
+    $cardCreationFee = 1.40 + ($walletBalance * 0.01);
+    $cardCreationFee = round($cardCreationFee, 2);
+    
+    // Check if customer has enough for the fee
+    if ($walletBalance < $cardCreationFee) {
+        $msg = "❌ <b>Insufficient Balance</b>\n\n";
+        $msg .= "You need at least $" . number_format($cardCreationFee, 2) . " to cover the card creation fee.\n\n";
+        $msg .= "Your balance: $" . number_format($walletBalance, 2) . "\n\n";
+        $msg .= "Please deposit more funds.";
+        sendMessage($chatId, $msg, false);
+        return;
+    }
+    
+    // Calculate card amount (customer balance minus fee)
+    $cardAmount = $walletBalance - $cardCreationFee;
+    $cardAmount = round($cardAmount, 2);
+    
     // Send "processing" message to customer
     $processingMsg = "⏳ <b>Creating Your Card...</b>\n\n";
     $processingMsg .= "💳 Processing virtual Visa card\n";
-    $processingMsg .= "💰 Amount: $" . number_format($walletBalance, 2) . "\n\n";
+    $processingMsg .= "💰 Card Amount: $" . number_format($cardAmount, 2) . "\n";
+    $processingMsg .= "💵 Creation Fee: $" . number_format($cardCreationFee, 2) . "\n\n";
     $processingMsg .= "Please wait a moment...";
     sendMessage($chatId, $processingMsg, false);
     
@@ -1122,7 +1142,7 @@ function handleCreateCard($chatId, $userId) {
         'name_on_card' => $nameOnCard,
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
-        'amount' => (string)$walletBalance,
+        'amount' => (string)$cardAmount,  // Card funded amount
         'customerEmail' => STROWALLET_EMAIL  // Addisu's account creates the card
     ];
     
@@ -1145,18 +1165,25 @@ function handleCreateCard($chatId, $userId) {
     $cardBrand = $result['response']['card_brand'] ?? $result['card_brand'] ?? 'Visa';
     $cardNumber = $result['response']['card_number'] ?? $result['card_number'] ?? null;
     
-    // Deduct from customer's local wallet (this is shown to customer)
+    // Get wallet record
+    $stmt = $db->prepare("SELECT * FROM wallets WHERE user_id = ?");
+    $stmt->execute([$user['id']]);
+    $walletRecord = $stmt->fetch(PDO::FETCH_ASSOC);
+    $balanceBefore = $walletRecord ? (float)$walletRecord['balance_usd'] : 0.00;
+    $balanceAfter = $balanceBefore - $walletBalance;  // Deduct full amount (fee + card amount)
+    
+    // Deduct full balance from customer's local wallet
     $stmt = $db->prepare("UPDATE wallets SET balance_usd = balance_usd - ? WHERE user_id = ?");
     $stmt->execute([$walletBalance, $user['id']]);
     
-    // Record wallet transaction
-    $stmt = $db->prepare("INSERT INTO wallet_transactions (user_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, ?, NOW())");
-    $stmt->execute([$user['id'], -$walletBalance, 'card_creation', "Card created: {$nameOnCard}"]);
+    // Record wallet transaction with correct column name
+    $stmt = $db->prepare("INSERT INTO wallet_transactions (user_id, amount_usd, transaction_type, description, balance_before_usd, balance_after_usd, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+    $stmt->execute([$user['id'], -$walletBalance, 'card_creation', "Card created: {$nameOnCard} (Fee: $" . number_format($cardCreationFee, 2) . ")", $balanceBefore, $balanceAfter]);
     
     // Store card in database linked to customer
     if ($cardId) {
         $stmt = $db->prepare("INSERT INTO cards (user_id, strow_card_id, card_type, card_brand, amount, status, name_on_card, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-        $stmt->execute([$user['id'], $cardId, 'virtual', $cardBrand, $walletBalance, $cardStatus, $nameOnCard]);
+        $stmt->execute([$user['id'], $cardId, 'virtual', $cardBrand, $cardAmount, $cardStatus, $nameOnCard]);
     }
     
     // Send success message to customer
@@ -1164,13 +1191,14 @@ function handleCreateCard($chatId, $userId) {
     $msg .= "💳 Your virtual {$cardBrand} card is ready!\n\n";
     $msg .= "━━━━━━━━━━━━━━━━━━\n";
     $msg .= "👤 <b>Name:</b> {$nameOnCard}\n";
-    $msg .= "💰 <b>Funded Amount:</b> $" . number_format($walletBalance, 2) . "\n";
+    $msg .= "💰 <b>Card Amount:</b> $" . number_format($cardAmount, 2) . "\n";
+    $msg .= "💵 <b>Creation Fee:</b> $" . number_format($cardCreationFee, 2) . "\n";
     if ($cardId) {
         $msg .= "🆔 <b>Card ID:</b> <code>{$cardId}</code>\n";
     }
     $msg .= "📊 <b>Status:</b> " . ucfirst($cardStatus) . "\n";
     $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $msg .= "💵 <b>Your wallet balance:</b> $0.00\n\n";
+    $msg .= "💵 <b>Your new wallet balance:</b> $" . number_format($balanceAfter, 2) . "\n\n";
     $msg .= "Use /cards to view your card details.";
     
     sendMessage($chatId, $msg, true, $userId);
