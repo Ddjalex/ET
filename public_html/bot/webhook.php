@@ -10,6 +10,9 @@ ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 ini_set('error_log', '/tmp/telegram_bot_errors.log');
 
+// Load environment variables from .env file
+require_once __DIR__ . '/../../secrets/load_env.php';
+
 // Configuration - Use environment variables from Replit Secrets
 define('BOT_TOKEN', $_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: '');
 define('STROW_BASE', 'https://strowallet.com/api');
@@ -17,7 +20,7 @@ define('STROW_PUBLIC_KEY', $_ENV['STROWALLET_API_KEY'] ?? getenv('STROWALLET_API
 define('STROW_SECRET_KEY', $_ENV['STROWALLET_WEBHOOK_SECRET'] ?? getenv('STROWALLET_WEBHOOK_SECRET') ?: '');
 define('STROWALLET_EMAIL', $_ENV['STROWALLET_EMAIL'] ?? getenv('STROWALLET_EMAIL') ?: '');
 define('ADMIN_CHAT_ID', $_ENV['ADMIN_CHAT_ID'] ?? getenv('ADMIN_CHAT_ID') ?: '');
-define('SUPPORT_URL', $_ENV['SUPPORT_URL'] ?? getenv('SUPPORT_URL') ?: 'https://t.me/support');
+define('SUPPORT_URL', $_ENV['SUPPORT_URL'] ?? getenv('SUPPORT_URL') ?? '');
 define('REFERRAL_TEXT', $_ENV['REFERRAL_TEXT'] ?? getenv('REFERRAL_TEXT') ?: 'Join me on StroWallet!');
 define('TELEGRAM_SECRET_TOKEN', $_ENV['TELEGRAM_SECRET_TOKEN'] ?? getenv('TELEGRAM_SECRET_TOKEN') ?: '');
 
@@ -1308,7 +1311,6 @@ function handleUserInfo($chatId, $userId) {
         $msg = "👤 <b>Your Profile</b>\n\n";
         $msg .= "🧑 <b>Name:</b> {$name}\n";
         $msg .= "📧 <b>Email:</b> {$email}\n";
-        $msg .= "📱 <b>Phone:</b> {$phone}\n";
         $msg .= "━━━━━━━━━━━━━━━━━━\n";
         $msg .= "🆔 <b>KYC Status:</b> {$kycEmoji} {$kycText}\n";
         $msg .= "💳 <b>Total Cards:</b> {$cardCount}\n";
