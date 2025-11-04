@@ -15,7 +15,7 @@ require_once __DIR__ . '/../../secrets/load_env.php';
 
 // Configuration - Use environment variables from Replit Secrets
 // Priority: Replit Secrets > .env file
-define('BOT_TOKEN', getenv('TELEGRAM_BOT_TOKEN') ?: ($_ENV['TELEGRAM_BOT_TOKEN'] ?? getenv('BOT_TOKEN') ?: ''));
+define('BOT_TOKEN', getenv('BOT_TOKEN') ?: ($_ENV['BOT_TOKEN'] ?? getenv('TELEGRAM_BOT_TOKEN') ?: ($_ENV['TELEGRAM_BOT_TOKEN'] ?? '')));
 define('STROW_BASE', 'https://strowallet.com/api');
 define('STROW_PUBLIC_KEY', getenv('STROWALLET_API_KEY') ?: ($_ENV['STROWALLET_API_KEY'] ?? ''));
 define('STROW_SECRET_KEY', getenv('STROWALLET_WEBHOOK_SECRET') ?: ($_ENV['STROWALLET_WEBHOOK_SECRET'] ?? ''));
