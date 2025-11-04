@@ -1453,7 +1453,7 @@ function handleWallet($chatId, $userId) {
     $inlineKeyboard = [
         'inline_keyboard' => [
             [
-                ['text' => '💵 Add ETB', 'callback_data' => 'deposit_etb'],
+                ['text' => '💵 Add USD', 'callback_data' => 'deposit_etb'],
                 ['text' => '💎 Add USDT', 'callback_data' => 'deposit_trc20']
             ],
             [
@@ -1512,7 +1512,7 @@ function handleViewTransactions($chatId, $userId) {
         $inlineKeyboard = [
             'inline_keyboard' => [
                 [
-                    ['text' => '💵 Add ETB', 'callback_data' => 'deposit_etb']
+                    ['text' => '💵 Add USD', 'callback_data' => 'deposit_etb']
                 ],
                 [
                     ['text' => '🔙 Back to Wallet', 'callback_data' => 'refresh_wallet']
