@@ -1103,20 +1103,27 @@ function handleCreateCard($chatId, $userId) {
         return;
     }
     
-    // User has sufficient balance - proceed with card creation via StroWallet API
-    // Prepare card holder's name
+    // User has sufficient balance - proceed with card creation
+    // Prepare card holder's name (customer's name)
     $nameOnCard = trim(($user['first_name'] ?? '') . ' ' . ($user['last_name'] ?? ''));
     if (empty($nameOnCard)) {
         $nameOnCard = 'Card Holder';
     }
     
-    // Prepare API parameters according to StroWallet documentation
+    // Send "processing" message to customer
+    $processingMsg = "⏳ <b>Creating Your Card...</b>\n\n";
+    $processingMsg .= "💳 Processing virtual Visa card\n";
+    $processingMsg .= "💰 Amount: $" . number_format($walletBalance, 2) . "\n\n";
+    $processingMsg .= "Please wait a moment...";
+    sendMessage($chatId, $processingMsg, false);
+    
+    // Prepare API parameters - using Addisu's StroWallet account
     $cardParams = [
         'name_on_card' => $nameOnCard,
         'card_type' => 'visa',
         'public_key' => STROW_PUBLIC_KEY,
         'amount' => (string)$walletBalance,
-        'customerEmail' => STROWALLET_EMAIL
+        'customerEmail' => STROWALLET_EMAIL  // Addisu's account creates the card
     ];
     
     // Add sandbox mode if enabled
@@ -1124,6 +1131,7 @@ function handleCreateCard($chatId, $userId) {
         $cardParams['mode'] = 'sandbox';
     }
     
+    // Create card using Addisu's StroWallet account (real card creation)
     $result = callStroWalletAPI('/bitvcard/create-card', 'POST', $cardParams, true);
     
     if (isset($result['error'])) {
@@ -1131,16 +1139,38 @@ function handleCreateCard($chatId, $userId) {
         return;
     }
     
-    // Extract card details from response
+    // Extract card details from StroWallet response
     $cardId = $result['response']['card_id'] ?? $result['card_id'] ?? null;
     $cardStatus = $result['response']['card_status'] ?? $result['status'] ?? 'created';
+    $cardBrand = $result['response']['card_brand'] ?? $result['card_brand'] ?? 'Visa';
+    $cardNumber = $result['response']['card_number'] ?? $result['card_number'] ?? null;
     
+    // Deduct from customer's local wallet (this is shown to customer)
+    $stmt = $db->prepare("UPDATE wallets SET balance_usd = balance_usd - ? WHERE user_id = ?");
+    $stmt->execute([$walletBalance, $user['id']]);
+    
+    // Record wallet transaction
+    $stmt = $db->prepare("INSERT INTO wallet_transactions (user_id, amount, transaction_type, description, created_at) VALUES (?, ?, ?, ?, NOW())");
+    $stmt->execute([$user['id'], -$walletBalance, 'card_creation', "Card created: {$nameOnCard}"]);
+    
+    // Store card in database linked to customer
+    if ($cardId) {
+        $stmt = $db->prepare("INSERT INTO cards (user_id, strow_card_id, card_type, card_brand, amount, status, name_on_card, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$user['id'], $cardId, 'virtual', $cardBrand, $walletBalance, $cardStatus, $nameOnCard]);
+    }
+    
+    // Send success message to customer
     $msg = "✅ <b>Card Created Successfully!</b>\n\n";
-    $msg .= "💳 Your virtual Visa card has been created and funded with $" . number_format($walletBalance, 2) . "\n";
+    $msg .= "💳 Your virtual {$cardBrand} card is ready!\n\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━\n";
+    $msg .= "👤 <b>Name:</b> {$nameOnCard}\n";
+    $msg .= "💰 <b>Funded Amount:</b> $" . number_format($walletBalance, 2) . "\n";
     if ($cardId) {
         $msg .= "🆔 <b>Card ID:</b> <code>{$cardId}</code>\n";
     }
-    $msg .= "📊 <b>Status:</b> " . ucfirst($cardStatus) . "\n\n";
+    $msg .= "📊 <b>Status:</b> " . ucfirst($cardStatus) . "\n";
+    $msg .= "━━━━━━━━━━━━━━━━━━\n\n";
+    $msg .= "💵 <b>Your wallet balance:</b> $0.00\n\n";
     $msg .= "Use /cards to view your card details.";
     
     sendMessage($chatId, $msg, true, $userId);
@@ -1154,28 +1184,39 @@ function handleMyCards($chatId, $userId) {
         return;
     }
     
-    $result = callStroWalletAPI('/bitvcard/fetch-card-detail/', 'GET', [], true);
+    // Get user from database
+    $db = getDBConnection();
+    $stmt = $db->prepare("SELECT * FROM users WHERE telegram_id = ?");
+    $stmt->execute([$userId]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    if (isset($result['error'])) {
-        sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
+    if (!$user) {
+        sendMessage($chatId, "❌ User not found. Please register first using /register", false);
         return;
     }
     
-    $cardsData = $result['data'] ?? $result;
-    $cards = $cardsData['cards'] ?? ($cardsData['data'] ?? []);
+    // Fetch customer's cards from local database
+    $stmt = $db->prepare("SELECT * FROM cards WHERE user_id = ? ORDER BY created_at DESC");
+    $stmt->execute([$user['id']]);
+    $cards = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    if (is_array($cards) && !empty($cards)) {
+    if (!empty($cards)) {
         $msg = "💳 <b>Your Virtual Cards</b>\n\n";
         
         foreach ($cards as $index => $card) {
-            $brand = $card['brand'] ?? $card['card_brand'] ?? 'Visa';
-            $last4 = $card['last4'] ?? $card['last_four'] ?? '****';
-            $status = $card['status'] ?? 'unknown';
+            $brand = $card['card_brand'] ?? 'Visa';
+            $status = $card['status'] ?? 'active';
             $statusEmoji = getStatusEmoji($status);
+            $cardId = $card['strow_card_id'] ?? 'N/A';
+            $amount = $card['amount'] ?? 0;
+            $nameOnCard = $card['name_on_card'] ?? 'Card Holder';
             
             $msg .= "━━━━━━━━━━━━━━━━━━\n";
             $msg .= "🔸 <b>Card #" . ($index + 1) . "</b>\n";
-            $msg .= "💳 {$brand} ••••{$last4}\n";
+            $msg .= "💳 {$brand} Card\n";
+            $msg .= "👤 {$nameOnCard}\n";
+            $msg .= "💰 Funded: $" . number_format($amount, 2) . "\n";
+            $msg .= "🆔 ID: <code>{$cardId}</code>\n";
             $msg .= "{$statusEmoji} " . ucfirst($status) . "\n";
         }
         
