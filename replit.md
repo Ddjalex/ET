@@ -41,11 +41,12 @@ The system utilizes a dual webhook architecture for Telegram and StroWallet. It 
 - **Audit Trail:** Complete tracking of all deposit submissions and approvals
 
 ### Features Implemented
-- **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet`, `/deposit_trc20`, `/deposit_etb`, `/invite`, `/support`, and associated reply keyboard buttons.
+- **Core Bot Features:** `/start`, `/register`, `/quickregister`, `/create_card`, `/cards`, `/userinfo`, `/wallet` (enhanced with transaction history), `/deposit_trc20`, `/deposit_etb`, `/invite`, `/support`, and associated reply keyboard buttons.
 - **Webhook Features:** Telegram webhook with secret token verification; StroWallet webhook with HMAC verification and real-time KYC sync; Admin alerts for deposits and KYC status changes via Telegram; Automatic database updates for KYC events; Giveaway entry tracking.
 - **Admin Panel KYC Management:** Real-time auto-refresh, manual sync, user filtering by KYC status.
 - **Broadcaster Module:** Full-featured broadcast system for admin-to-user communication supporting various content types (text, photo, video, poll), delivery channels (Telegram channel, in-app feed), scheduling, inline buttons, giveaway system, message pinning, comprehensive logging, status filtering, and a stats dashboard.
 - **Manual Deposit Verification:** All deposit transactions are manually reviewed by admin through the admin panel. Users submit payment screenshots and transaction IDs via Telegram, which are stored in the database for admin verification. Approved deposits are credited to user's StroWallet account.
+- **Enhanced Wallet Interface:** Beautiful wallet display with box-drawing characters, separate USD/ETB balance sections, transaction count, and quick action buttons (Add ETB, Add USDT, Transaction History, Refresh Balance). Transaction history shows last 10 transactions with emoji indicators, status, amount, and date.
 - **Error Handling:** Comprehensive error handling for authentication, invalid endpoints, network errors, Telegram API errors, and payment verification failures, with request ID display and user-friendly messages.
 
 ## External Dependencies
