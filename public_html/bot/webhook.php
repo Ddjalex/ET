@@ -1902,6 +1902,32 @@ function sendMessageWithReturn($chatId, $text, $buttonText = '🔙 Return to Men
     }
 }
 
+function sendMessageWithKeyboard($chatId, $text, $inlineKeyboard) {
+    $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendMessage';
+    
+    $payload = [
+        'chat_id' => $chatId,
+        'text' => $text,
+        'parse_mode' => 'HTML',
+        'reply_markup' => $inlineKeyboard
+    ];
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    
+    error_log("Sending message with inline keyboard to chat $chatId - HTTP $httpCode");
+    
+    if ($httpCode !== 200) {
+        error_log("Telegram API Error: HTTP $httpCode - Response: $response");
+    }
+}
+
 function sendTypingAction($chatId) {
     $url = 'https://api.telegram.org/bot' . BOT_TOKEN . '/sendChatAction';
     $payload = ['chat_id' => $chatId, 'action' => 'typing'];
