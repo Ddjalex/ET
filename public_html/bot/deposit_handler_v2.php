@@ -75,11 +75,11 @@ function processDepositAmount_v2($chatId, $userId, $amount) {
     // Clear deposit state
     setUserDepositState($userId, null);
     
-    // Show deposit summary WITH total including fee
+    // Show simplified deposit summary - only ETB amount to pay
     $userMsg = "💰 <b>Deposit Summary</b>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
-    $userMsg .= "💵 <b>USD Amount:</b> $" . number_format($usdAmount, 2) . "\n";
-    $userMsg .= "💸 <b>Amount to Pay:</b> " . number_format($totalEtbAmount, 2) . " ETB\n\n";
+    $userMsg .= "💸 <b>Amount to Deposit:</b>\n";
+    $userMsg .= "<code>" . number_format($totalEtbAmount, 2) . " ETB</code>\n\n";
     $userMsg .= "━━━━━━━━━━━━━━━━━━\n\n";
     $userMsg .= "👇 <b>Select your payment method:</b>";
     
@@ -91,12 +91,12 @@ function processDepositAmount_v2($chatId, $userId, $amount) {
         'reply_markup' => [
             'inline_keyboard' => [
                 [
-                    ['text' => '📱 TeleBirr', 'callback_data' => "user_deposit_telebirr_{$usdAmount}_{$etbAmount}"],
-                    ['text' => '💵 CBE Birr', 'callback_data' => "user_deposit_cbebirr_{$usdAmount}_{$etbAmount}"]
+                    ['text' => '📱 TeleBirr', 'callback_data' => "user_deposit_telebirr_{$usdAmount}_{$totalEtbAmount}"],
+                    ['text' => '💵 CBE Birr', 'callback_data' => "user_deposit_cbebirr_{$usdAmount}_{$totalEtbAmount}"]
                 ],
                 [
-                    ['text' => '💳 M-Pesa', 'callback_data' => "user_deposit_mpesa_{$usdAmount}_{$etbAmount}"],
-                    ['text' => '🏦 Bank Transfer', 'callback_data' => "user_deposit_bank_{$usdAmount}_{$etbAmount}"]
+                    ['text' => '💳 M-Pesa', 'callback_data' => "user_deposit_mpesa_{$usdAmount}_{$totalEtbAmount}"],
+                    ['text' => '🏦 Bank Transfer', 'callback_data' => "user_deposit_bank_{$usdAmount}_{$totalEtbAmount}"]
                 ]
             ]
         ]
