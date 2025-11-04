@@ -1266,49 +1266,65 @@ function handleUserInfo($chatId, $userId) {
         return;
     }
     
-    $result = callStroWalletAPI('/user/profile', 'GET', [], false);
-    
-    if (isset($result['error'])) {
-        sendErrorMessage($chatId, $result['error'], $result['request_id'] ?? null);
+    // Get user from database
+    $db = getDBConnection();
+    if (!$db) {
+        sendMessage($chatId, "❌ Service temporarily unavailable. Please try again later.", false);
         return;
     }
     
-    $userData = $result['data'] ?? $result;
-    
-    $name = $userData['name'] ?? $userData['full_name'] ?? 'N/A';
-    $phone = $userData['phone'] ?? $userData['phone_number'] ?? 'N/A';
-    $kycStatus = $userData['kyc_verified'] ?? $userData['kyc_status'] ?? false;
-    $userIdValue = $userData['user_id'] ?? $userData['id'] ?? 'N/A';
-    $cardLimit = $userData['cards_count'] ?? 0;
-    $maxCards = $userData['max_cards'] ?? 10;
-    $points = $userData['points'] ?? 0;
-    $referrals = $userData['referrals_count'] ?? 0;
-    $joinedDate = $userData['created_at'] ?? $userData['joined_date'] ?? 'N/A';
-    $balance = $userData['balance'] ?? $userData['wallet_balance'] ?? '0.00';
-    
-    $kycEmoji = $kycStatus ? '✅' : '🔴';
-    $kycText = $kycStatus ? 'Verified' : 'Not Verified';
-    
-    $msg = "👤 <b>Here's Your Profile:</b>\n\n";
-    $msg .= "🧑 <b>Name:</b> {$name}\n";
-    $msg .= "📱 <b>Phone Number:</b> {$phone}\n";
-    $msg .= "🆔 <b>KYC Status:</b> {$kycEmoji} {$kycText}\n";
-    $msg .= "🔑 <b>User ID:</b> " . maskUserId($userIdValue) . "\n";
-    $msg .= "💳 <b>Card Limit:</b> {$cardLimit} / {$maxCards}\n";
-    $msg .= "🎯 <b>Points:</b> {$points}\n";
-    $msg .= "👥 <b>Referrals:</b> {$referrals}\n";
-    $msg .= "📅 <b>Joined On:</b> " . formatDate($joinedDate) . "\n";
-    $msg .= "💰 <b>Wallet Balance:</b> $" . number_format((float)$balance, 2) . "\n";
-    
-    if (!$kycStatus) {
-        $msg .= "\n⚠️ <b>Attention!</b> We've noticed you haven't completed your KYC verification yet. Unlock a world of benefits by clicking the button below and completing the process:\n\n";
-        $msg .= "• Higher card limits ✅\n";
-        $msg .= "• Increased maximum top-up amounts 💵\n";
-        $msg .= "• And more benefits! 🎉\n\n";
-        $msg .= "Don't miss out on these fantastic features!";
+    try {
+        // Fetch user data from database
+        $stmt = $db->prepare("SELECT u.*, w.balance_usd, w.balance_etb 
+                             FROM users u 
+                             LEFT JOIN wallets w ON u.id = w.user_id 
+                             WHERE u.telegram_id = ?");
+        $stmt->execute([$userId]);
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$userData) {
+            sendMessage($chatId, "❌ User not found. Please register first using /register", false);
+            return;
+        }
+        
+        // Get card count
+        $stmt = $db->prepare("SELECT COUNT(*) as card_count FROM cards WHERE user_id = ?");
+        $stmt->execute([$userData['id']]);
+        $cardData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $cardCount = $cardData['card_count'] ?? 0;
+        
+        // Format user data
+        $name = trim(($userData['first_name'] ?? '') . ' ' . ($userData['last_name'] ?? '')) ?: 'N/A';
+        $phone = $userData['phone'] ?? 'N/A';
+        $email = $userData['email'] ?? 'N/A';
+        $kycStatus = ($userData['kyc_status'] ?? 'pending') === 'approved';
+        $userIdValue = $userData['strow_customer_id'] ?? 'N/A';
+        $balance = $userData['balance_usd'] ?? 0.00;
+        $joinedDate = $userData['created_at'] ?? 'N/A';
+        
+        $kycEmoji = $kycStatus ? '✅' : '🔴';
+        $kycText = $kycStatus ? 'Approved' : 'Pending';
+        
+        $msg = "👤 <b>Your Profile</b>\n\n";
+        $msg .= "🧑 <b>Name:</b> {$name}\n";
+        $msg .= "📧 <b>Email:</b> {$email}\n";
+        $msg .= "📱 <b>Phone:</b> {$phone}\n";
+        $msg .= "━━━━━━━━━━━━━━━━━━\n";
+        $msg .= "🆔 <b>KYC Status:</b> {$kycEmoji} {$kycText}\n";
+        $msg .= "💳 <b>Total Cards:</b> {$cardCount}\n";
+        $msg .= "💰 <b>Wallet Balance:</b> $" . number_format((float)$balance, 2) . "\n";
+        $msg .= "📅 <b>Member Since:</b> " . formatDate($joinedDate) . "\n";
+        
+        if (!$kycStatus) {
+            $msg .= "\n⚠️ <b>Note:</b> Complete KYC verification to unlock all features!";
+        }
+        
+        sendMessage($chatId, $msg, true, $userId);
+        
+    } catch (Exception $e) {
+        error_log("Error in handleUserInfo: " . $e->getMessage());
+        sendMessage($chatId, "❌ Error loading profile. Please try again later.", false);
     }
-    
-    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleWallet($chatId, $userId) {
@@ -1346,12 +1362,21 @@ function handleWallet($chatId, $userId) {
     if ($balanceUSD > 0) {
         $msg .= "✅ You have funds available!\n";
         $msg .= "💳 Use /create_card to create a virtual card\n\n";
+        sendMessage($chatId, $msg, true, $userId);
     } else {
-        $msg .= "📥 To add funds, use:\n";
-        $msg .= "💵 Deposit ETB - Click button below\n";
+        $msg .= "📥 To deposit to wallet, click button below\n";
+        
+        // Create inline button for deposit
+        $inlineKeyboard = [
+            'inline_keyboard' => [
+                [
+                    ['text' => '💵 Deposit to Wallet', 'callback_data' => 'deposit_etb']
+                ]
+            ]
+        ];
+        
+        sendMessageWithKeyboard($chatId, $msg, $inlineKeyboard);
     }
-    
-    sendMessage($chatId, $msg, true, $userId);
 }
 
 function handleDepositTRC20($chatId, $userId) {
